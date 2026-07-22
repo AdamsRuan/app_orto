@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gestão Cirúrgica">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F0F5F7">
+<title>Gestão Cirúrgica</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Biblioteca de login Microsoft (MSAL), incluída localmente (não depende de CDN
+     externo — evita bloqueio por bloqueador de anúncios/extensões/firewall e
+     garante que o Service Worker consiga cachear para funcionar offline). -->
+<script src="./msal-browser.min.js" defer onload="window.MSAL_CARREGOU=true" onerror="window.MSAL_FALHOU=true"></script>
+<!-- PWA: registro do service worker (funcionamento offline e instalação no iOS/Android) -->
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch((e) => {
+        console.error('Não foi possível registrar o service worker', e);
+      });
+    });
+  }
+</script>
+<style>
+  :root{
+    --bg: #F0F5F7;
+    --bg-2: #E4EEF1;
+    --card: #FFFFFF;
+    --ink: #1F3A44;
+    --ink-soft: #64818A;
+    --primary: #2E7D8C;
+    --primary-dark: #1F5C68;
+    --olive: #4C8C63;
+    --olive-bg: #E1EEE4;
+    --amber: #C9862F;
+    --amber-bg: #F5E4C8;
+    --blue: #4C7A94;
+    --blue-bg: #DCE9EE;
+    --red: #B84C3E;
+    --border: rgba(31,58,68,0.12);
+    --shadow: 0 2px 10px rgba(31,58,68,0.08);
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    overscroll-behavior-y: none;
+  }
+  #app{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    position: relative;
+  }
+  header{
+    padding: env(safe-area-inset-top,0px) 20px 14px 20px;
+    background: var(--bg);
+    position: sticky; top:0; z-index: 10;
+    border-bottom: 1px solid var(--border);
+  }
+  header .row{ display:flex; align-items:center; gap:10px; padding-top: 14px; }
+  .brand-mark{
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, var(--primary), var(--primary-dark));
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 -4px 8px rgba(31,58,68,0.25);
+  }
+  .brand-mark svg{ width:19px; height:19px; stroke:#fff; }
+  header h1{ font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 20px; margin: 0; letter-spacing: -0.2px; }
+  header p{ margin: 2px 0 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  main{ flex: 1; padding: 16px 16px 90px 16px; overflow-y: auto; }
+  .empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 60px 24px; color: var(--ink-soft); }
+  .empty-state .icon{ font-size: 40px; margin-bottom: 10px; }
+  .empty-state h3{ font-family:'Fredoka', sans-serif; font-weight:600; color: var(--ink); margin: 0 0 6px 0; font-size: 16px; }
+  .empty-state p{ margin:0; font-size: 13.5px; line-height:1.5; max-width: 280px; }
+
+  nav.tabbar{
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom,0px)) 4px;
+    z-index: 20;
+  }
+  nav.tabbar button{
+    flex: 1; background: none; border: none;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 2px; border-radius: 12px;
+    color: var(--ink-soft);
+    font-family: 'Inter', sans-serif; font-size: 10.3px; font-weight: 500;
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+  }
+  nav.tabbar button .tab-icon{ width: 21px; height: 21px; display:flex; align-items:center; justify-content:center; }
+  nav.tabbar button.active{ color: var(--primary-dark); background: var(--bg-2); }
+  nav.tabbar svg{ width: 21px; height: 21px; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  .card{ background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+
+  .fab-add{
+    width: 100%; display:flex; align-items:center; justify-content:center; gap:8px;
+    background: var(--primary); color: #fff; border: none; border-radius: 12px;
+    padding: 13px; font-family:'Inter', sans-serif; font-weight:600; font-size: 14.5px;
+    margin-bottom: 16px; cursor:pointer;
+    box-shadow: 0 3px 10px rgba(46,125,140,0.35);
+  }
+  .fab-add svg{ width:19px; height:19px; }
+  .fab-add:active{ transform: scale(0.98); }
+
+  .form-card{ margin-bottom: 18px; display:flex; flex-direction:column; gap:12px; }
+  .field{ display:flex; flex-direction:column; gap:5px; flex:1; }
+  .field-row{ display:flex; gap:10px; }
+  .field label{ font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+  .field .hint{ font-size: 11px; color: var(--ink-soft); font-weight: 400; margin-top: -2px; }
+  .field input, .field select{
+    border: 1px solid var(--border); background: var(--bg-2); border-radius: 10px;
+    padding: 10px 11px; font-family: 'Inter', sans-serif; font-size: 14.5px; color: var(--ink); width: 100%;
+  }
+  .field input:focus, .field select:focus{ outline: none; border-color: var(--primary); }
+  .form-actions{ display:flex; gap:10px; margin-top: 4px; }
+  .btn-primary, .btn-secondary{
+    flex:1; border-radius: 10px; padding: 11px; font-family:'Inter', sans-serif;
+    font-weight: 600; font-size: 14px; cursor:pointer; border: none;
+  }
+  .btn-primary{ background: var(--ink); color: #fff; }
+  .btn-secondary{ background: var(--bg-2); color: var(--ink-soft); border: 1px solid var(--border); }
+
+  .item-card{
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 13px 14px; margin-bottom: 10px; box-shadow: var(--shadow);
+  }
+  .item-card .top-row{ display:flex; justify-content:space-between; align-items:flex-start; gap: 10px; }
+  .item-card .title{ font-family:'Fredoka', sans-serif; font-weight: 600; font-size: 15px; }
+  .item-card .meta{ font-size: 12px; color: var(--ink-soft); margin-top: 3px; line-height:1.6; }
+  .item-card .meta b{ color: var(--ink); font-weight:600; }
+  .item-card .value{ font-weight: 700; font-size: 15.5px; white-space: nowrap; color: var(--primary-dark); }
+  .item-card .bottom-row{ display:flex; justify-content:space-between; align-items:center; margin-top: 10px; gap:8px; }
+  .badge{ font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px; background: var(--blue-bg); color: var(--blue); }
+  .icon-btn{ background:none; border:none; color: var(--ink-soft); cursor:pointer; padding: 4px; display:flex; align-items:center; }
+  .icon-btn svg{ width:17px; height:17px; }
+  .row-actions{ display:flex; gap:4px; }
+
+  .filter-toggle-row{ display:flex; justify-content:flex-end; margin-bottom: 10px; }
+  .btn-filter-toggle{
+    display:flex; align-items:center; gap:6px;
+    background: var(--card); border:1px solid var(--border); border-radius: 20px;
+    padding: 8px 14px; font-family:'Inter', sans-serif; font-weight:600; font-size:13px;
+    color: var(--ink-soft); cursor:pointer;
+  }
+  .btn-filter-toggle svg{ width:15px; height:15px; }
+  .filter-badge{ background: var(--primary); color:#fff; font-size:10.5px; font-weight:700; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; }
+  .filter-panel{ background: var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom: 14px; display:flex; flex-direction:column; gap:12px; }
+  .filter-panel .btn-secondary{ width:100%; }
+
+  .sub-tabbar{ display:flex; gap:6px; margin-bottom: 16px; background: var(--bg-2); border-radius: 12px; padding: 4px; }
+  .sub-tab-btn{
+    flex:1; border:none; background:none; border-radius: 9px; padding: 9px 4px;
+    font-family:'Inter', sans-serif; font-weight:600; font-size: 12.8px; color: var(--ink-soft); cursor:pointer;
+  }
+  .sub-tab-btn.active{ background: var(--card); color: var(--primary-dark); box-shadow: var(--shadow); }
+
+  .backup-section{ margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
+  .backup-title{ font-family:'Fredoka', sans-serif; font-weight: 600; font-size: 14.5px; }
+  .backup-desc{ font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin: -4px 0 2px 0; }
+
+  .sync-section{ display:flex; flex-direction:column; gap:10px; margin-bottom: 4px; }
+  .sync-status-row{ display:flex; align-items:center; gap:8px; background: var(--bg-2); border-radius: 10px; padding: 10px 12px; }
+  .sync-dot{ width:9px; height:9px; border-radius:50%; background: var(--ink-soft); flex-shrink:0; }
+  .sync-dot.ok{ background: var(--olive); }
+  .sync-dot.syncing{ background: var(--amber); animation: sync-pulse 1s infinite ease-in-out; }
+  .sync-dot.error{ background: var(--red); }
+  .sync-dot.offline{ background: var(--ink-soft); }
+  @keyframes sync-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+  .sync-status-text{ font-size: 12.5px; color: var(--ink-soft); flex:1; line-height:1.4; }
+  .sync-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .sync-actions .btn-secondary, .sync-actions .btn-primary{ flex: unset; padding: 9px 14px; font-size: 13px; }
+  .sync-config{ display:flex; flex-direction:column; gap:8px; background: var(--bg-2); border-radius: 10px; padding: 12px; }
+  .sync-config .field label{ font-size: 12px; }
+  .sync-toggle-link{ background:none; border:none; padding:0; color: var(--blue); font-size: 12.5px; font-weight:600; text-align:left; cursor:pointer; font-family:'Inter', sans-serif; }
+  .header-sync-dot{ width:8px; height:8px; border-radius:50%; background: var(--ink-soft); display:inline-block; margin-left:6px; vertical-align: middle; }
+  .header-sync-dot.ok{ background: var(--olive); }
+  .header-sync-dot.syncing{ background: var(--amber); animation: sync-pulse 1s infinite ease-in-out; }
+  .header-sync-dot.error{ background: var(--red); }
+
+  .suggestions-dropdown{
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(31,58,68,0.14); max-height: 190px; overflow-y: auto; z-index: 30;
+  }
+  .suggestions-dropdown .suggestion-item{ padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+  .suggestions-dropdown .suggestion-item:last-child{ border-bottom: none; }
+  .suggestions-dropdown .suggestion-item:active, .suggestions-dropdown .suggestion-item.active{ background: var(--bg-2); }
+  .suggestions-dropdown .suggestion-name{ font-size: 14px; font-weight: 600; color: var(--ink); }
+  .suggestions-dropdown .suggestion-phone{ font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+
+  .modal-overlay{ position:fixed; inset:0; background: rgba(31,58,68,0.45); display:flex; align-items:flex-end; justify-content:center; z-index: 200; }
+  .modal-overlay.hidden{ display:none; }
+  .modal-sheet{
+    background: var(--bg); width:100%; max-width:480px; border-radius: 18px 18px 0 0;
+    padding: 16px 20px calc(18px + env(safe-area-inset-bottom,0px)) 20px; max-height: 82vh; overflow-y:auto;
+    box-shadow: 0 -8px 26px rgba(31,58,68,0.28); display:flex; flex-direction:column; gap:12px;
+  }
+  .modal-sheet h3{ font-family:'Fredoka', sans-serif; font-weight:600; font-size: 18px; margin:0; }
+  .modal-subtitle{ font-size:12.5px; color:var(--ink-soft); margin: -6px 0 4px 0; }
+  .modal-close-row{ display:flex; justify-content:space-between; align-items:center; margin: -4px -4px -6px 0; }
+
+  .placeholder-card{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding: 50px 24px; color: var(--ink-soft); background: var(--card); border:1px dashed var(--border); border-radius:16px;
+  }
+  .placeholder-card .icon{ font-size:36px; margin-bottom:10px; }
+  .placeholder-card h3{ font-family:'Fredoka', sans-serif; font-weight:600; color:var(--ink); margin:0 0 6px 0; font-size:16px; }
+  .placeholder-card p{ margin:0; font-size:13px; line-height:1.5; max-width:280px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="row">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v3H6a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2v3a4 4 0 0 0 8 0v-3h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4Z"/></svg>
+      </div>
+      <div>
+        <h1 id="header-title">Cirurgias<span id="header-sync-dot" class="header-sync-dot" title="Status da sincronização"></span></h1>
+        <p id="header-subtitle">Gestão Cirúrgica</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===================== ABA CIRURGIAS ===================== -->
+    <section id="tab-cirurgias" class="tab-panel active">
+
+      <button id="btn-nova-cirurgia" class="fab-add">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Nova cirurgia
+      </button>
+
+      <form id="form-cirurgia" class="card form-card" style="display:none;">
+        <div id="form-edit-badge" style="display:none; font-size:12.5px; font-weight:600; color: var(--ink-soft);">
+          Editando cirurgia
+        </div>
+
+        <div class="field">
+          <label for="f-nome-cirurgia">Nome da cirurgia</label>
+          <input type="text" id="f-nome-cirurgia" autocomplete="off" placeholder="Ex: Colecistectomia">
+        </div>
+
+        <div class="field" style="position:relative;">
+          <label for="f-hospital">Hospital</label>
+          <input type="text" id="f-hospital" autocomplete="off" placeholder="Ex: Hospital Regional">
+          <div id="sugestoes-hospital" class="suggestions-dropdown" style="display:none;"></div>
+        </div>
+
+        <div class="field">
+          <label for="f-data">Data</label>
+          <input type="date" id="f-data">
+        </div>
+
+        <div class="field" style="position:relative;">
+          <label for="f-medico">Médico</label>
+          <input type="text" id="f-medico" autocomplete="off" placeholder="Ex: Dr. João Silva">
+          <div id="sugestoes-medico" class="suggestions-dropdown" style="display:none;"></div>
+        </div>
+
+        <div class="field" style="position:relative;">
+          <label for="f-instrumentador">Instrumentador</label>
+          <input type="text" id="f-instrumentador" autocomplete="off" placeholder="Ex: Ruan Costa">
+          <div id="sugestoes-instrumentador" class="suggestions-dropdown" style="display:none;"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f-valor-total">Valor total (R$)</label>
+            <input type="number" id="f-valor-total" min="0" step="0.01" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="f-valor-instrumentador">Valor instrumentador (R$)</label>
+            <input type="number" id="f-valor-instrumentador" min="0" step="0.01" placeholder="0,00">
+          </div>
+        </div>
+
+        <div class="field-row" style="align-items:center;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;">
+            <input type="checkbox" id="f-pago-instrumentador" style="width:17px; height:17px;">
+            Já paguei o instrumentador
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="btn-cancelar-cirurgia" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar cirurgia</button>
+        </div>
+      </form>
+
+      <div class="filter-toggle-row">
+        <button id="btn-toggle-filtros" class="btn-filter-toggle" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          Filtros
+          <span id="filtro-badge" class="filter-badge" style="display:none;">0</span>
+        </button>
+      </div>
+
+      <div id="painel-filtros" class="filter-panel" style="display:none;">
+        <div class="field">
+          <label for="f-filtro-texto">Buscar (cirurgia, hospital, médico ou instrumentador)</label>
+          <input type="text" id="f-filtro-texto" placeholder="Digite para buscar">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-filtro-de">De</label>
+            <input type="date" id="f-filtro-de">
+          </div>
+          <div class="field">
+            <label for="f-filtro-ate">Até</label>
+            <input type="date" id="f-filtro-ate">
+          </div>
+        </div>
+        <button id="btn-limpar-filtros" class="btn-secondary" type="button">Limpar filtros</button>
+      </div>
+
+      <div id="lista-cirurgias"></div>
+
+      <div id="cirurgias-empty" class="empty-state">
+        <div class="icon">🏥</div>
+        <h3>Nenhuma cirurgia cadastrada</h3>
+        <p>Toque em "Nova cirurgia" para registrar a primeira. Nenhum campo é obrigatório.</p>
+      </div>
+
+      <div id="cirurgias-empty-filtro" class="empty-state" style="display:none;">
+        <div class="icon">🔍</div>
+        <h3>Nenhuma cirurgia encontrada</h3>
+        <p>Tente ajustar ou limpar os filtros.</p>
+      </div>
+
+    </section>
+
+    <!-- ===================== ABA DASHBOARD (placeholder) ===================== -->
+    <section id="tab-dashboard" class="tab-panel">
+
+      <div class="sub-tabbar">
+        <button class="sub-tab-btn active" data-dash="geral">Geral</button>
+        <button class="sub-tab-btn" data-dash="instrumentador">Instrumentador</button>
+      </div>
+
+      <div id="dash-geral">
+        <div class="dash-filter-row">
+          <div class="field">
+            <label for="f-dash-de">De</label>
+            <input type="date" id="f-dash-de">
+          </div>
+          <div class="field">
+            <label for="f-dash-ate">Até</label>
+            <input type="date" id="f-dash-ate">
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom:10px;">
+          <div class="field">
+            <label for="f-dash-hospital">Hospital</label>
+            <select id="f-dash-hospital"><option value="">Todos</option></select>
+          </div>
+          <div class="field">
+            <label for="f-dash-medico">Médico</label>
+            <select id="f-dash-medico"><option value="">Todos</option></select>
+          </div>
+        </div>
+        <button id="btn-dash-limpar" class="dash-clear" type="button">Limpar filtros</button>
+
+        <div class="dash-grid">
+          <div class="dash-card total full">
+            <div class="dash-label"><span class="dash-dot" style="background:var(--primary);"></span>Total faturado</div>
+            <div class="dash-amount" id="dash-total-faturado" style="color:var(--primary-dark);">R$ 0,00</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-label"><span class="dash-dot" style="background:var(--olive);"></span>Cirurgias</div>
+            <div class="dash-amount" id="dash-qtd-cirurgias" style="color:var(--olive);">0</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-label"><span class="dash-dot" style="background:var(--amber);"></span>Ticket médio</div>
+            <div class="dash-amount" id="dash-ticket-medio" style="color:var(--amber);">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px;">
+          <div class="backup-title" style="margin-bottom:8px;">Por hospital</div>
+          <div id="dash-ranking-hospital"></div>
+        </div>
+        <div class="card" style="margin-bottom:12px;">
+          <div class="backup-title" style="margin-bottom:8px;">Por médico</div>
+          <div id="dash-ranking-medico"></div>
+        </div>
+
+        <div id="dash-empty" class="empty-state" style="display:none;">
+          <div class="icon">📊</div>
+          <h3>Nenhuma cirurgia no período</h3>
+          <p>Ajuste os filtros ou registre uma cirurgia na aba Cirurgias.</p>
+        </div>
+      </div>
+
+      <div id="dash-instrumentador" style="display:none;">
+        <div class="dash-grid">
+          <div class="dash-card total full">
+            <div class="dash-label"><span class="dash-dot" style="background:var(--amber);"></span>Total a pagar (pendente)</div>
+            <div class="dash-amount" id="dash-total-a-pagar" style="color:var(--amber);">R$ 0,00</div>
+          </div>
+          <div class="dash-card full" style="grid-column:1/-1;">
+            <div class="dash-label"><span class="dash-dot" style="background:var(--olive);"></span>Já pago</div>
+            <div class="dash-amount" id="dash-total-pago" style="color:var(--olive);">R$ 0,00</div>
+          </div>
+        </div>
+        <div id="dash-lista-instrumentadores"></div>
+        <div id="dash-instrumentador-empty" class="empty-state" style="display:none;">
+          <div class="icon">🧑‍⚕️</div>
+          <h3>Nenhum instrumentador com cirurgias registradas</h3>
+          <p>Cadastre cirurgias com um instrumentador para ver os valores aqui.</p>
+        </div>
+      </div>
+
+      <div class="backup-section sync-section">
+        <div class="backup-title">Sincronização com o Excel</div>
+        <p class="backup-desc">Os dados são salvos primeiro neste aparelho e funcionam sem internet. Quando conectado à Microsoft e à internet, tudo é enviado automaticamente para a sua planilha no OneDrive.</p>
+
+        <div class="sync-status-row">
+          <span id="sync-dot" class="sync-dot"></span>
+          <span id="sync-status-text" class="sync-status-text">Verificando...</span>
+        </div>
+
+        <div class="sync-actions">
+          <button id="btn-sync-conectar" class="btn-secondary" type="button" style="display:none;">Conectar com a Microsoft</button>
+          <button id="btn-sync-agora" class="btn-secondary" type="button" style="display:none;">Sincronizar agora</button>
+          <button id="btn-sync-desconectar" class="btn-secondary" type="button" style="display:none;">Desconectar</button>
+        </div>
+
+        <button id="btn-sync-toggle-config" class="sync-toggle-link" type="button">Configurar integração</button>
+
+        <div id="sync-config" class="sync-config" style="display:none;">
+          <div class="field">
+            <label for="f-sync-client-id">ID do aplicativo (Azure AD)</label>
+            <input type="text" id="f-sync-client-id" placeholder="Cole aqui o Application (client) ID">
+          </div>
+          <div class="field">
+            <label for="f-sync-link">Link da planilha (OneDrive/Excel Online)</label>
+            <input type="text" id="f-sync-link" placeholder="https://1drv.ms/x/...">
+          </div>
+          <button id="btn-sync-salvar-config" class="btn-primary" type="button" style="margin-top:2px;">Salvar configuração</button>
+          <p class="backup-desc" style="margin-top:2px;">Precisa de um "ID do aplicativo" gratuito criado no portal da Microsoft (Azure AD) para autorizar o app a editar a planilha em seu nome.</p>
+        </div>
+      </div>
+
+      <div class="backup-section">
+        <div class="backup-title">Backup dos dados</div>
+        <p class="backup-desc">Os dados ficam salvos neste navegador/aparelho. Baixe um backup de tempos em tempos e guarde em local seguro.</p>
+        <button id="btn-backup-baixar" class="btn-secondary" type="button">Baixar backup</button>
+        <button id="btn-backup-restaurar" class="btn-secondary" type="button">Restaurar backup</button>
+        <input type="file" id="input-backup-arquivo" accept="application/json" style="display:none;">
+      </div>
+    </section>
+
+    <!-- ===================== ABA CLIENTES ===================== -->
+    <section id="tab-clientes" class="tab-panel">
+
+      <div class="sub-tabbar">
+        <button class="sub-tab-btn active" data-tipo="instrumentador">Instrumentador</button>
+        <button class="sub-tab-btn" data-tipo="medico">Médico</button>
+        <button class="sub-tab-btn" data-tipo="hospital">Hospital</button>
+      </div>
+
+      <button id="btn-nova-pessoa" class="fab-add">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span id="btn-nova-pessoa-label">Novo instrumentador</span>
+      </button>
+
+      <form id="form-pessoa" class="card form-card" style="display:none;">
+        <div id="form-pessoa-edit-badge" style="display:none; font-size:12.5px; font-weight:600; color: var(--ink-soft);">Editando</div>
+        <div class="field">
+          <label for="f-pessoa-nome">Nome</label>
+          <input type="text" id="f-pessoa-nome" autocomplete="off" placeholder="Nome">
+        </div>
+        <div class="field">
+          <label for="f-pessoa-telefone">Telefone</label>
+          <input type="tel" id="f-pessoa-telefone" placeholder="(69) 99999-9999">
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancelar-pessoa" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+
+      <div id="lista-pessoas"></div>
+
+      <div id="pessoas-empty" class="empty-state">
+        <div class="icon">👤</div>
+        <h3 id="pessoas-empty-titulo">Nenhum instrumentador cadastrado</h3>
+        <p>Toque em "Novo" para cadastrar, ou cadastre direto ao registrar uma cirurgia.</p>
+      </div>
+
+    </section>
+
+    <!-- ===================== ABA ORÇAMENTO (placeholder) ===================== -->
+    <section id="tab-orcamento" class="tab-panel">
+      <div class="placeholder-card">
+        <div class="icon">💰</div>
+        <h3>Em breve</h3>
+        <p>Essa aba ainda será definida com você em uma próxima fase.</p>
+      </div>
+    </section>
+
+    <!-- ===================== ABA ESTOQUE (placeholder) ===================== -->
+    <section id="tab-estoque" class="tab-panel">
+      <div class="placeholder-card">
+        <div class="icon">📦</div>
+        <h3>Em breve</h3>
+        <p>Essa aba ainda será definida com você em uma próxima fase.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="cirurgias" data-title="Cirurgias" data-subtitle="Gestão Cirúrgica">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v3H6a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2v3a4 4 0 0 0 8 0v-3h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4Z"/></svg></span>
+      Cirurgias
+    </button>
+    <button class="tab-btn" data-tab="dashboard" data-title="Dashboard" data-subtitle="Resumo geral">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span>
+      Dashboard
+    </button>
+    <button class="tab-btn" data-tab="clientes" data-title="Clientes" data-subtitle="Instrumentador, médico e hospital">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></svg></span>
+      Clientes
+    </button>
+    <button class="tab-btn" data-tab="orcamento" data-title="Orçamento" data-subtitle="Em breve">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+      Orçamento
+    </button>
+    <button class="tab-btn" data-tab="estoque" data-title="Estoque" data-subtitle="Em breve">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
+      Estoque
+    </button>
+  </nav>
+
+  <div id="modal-pessoa-detalhe" class="modal-overlay hidden">
+    <div class="modal-sheet">
+      <div class="modal-close-row">
+        <div style="display:flex; gap:6px;">
+          <button type="button" id="btn-editar-pessoa" class="icon-btn" aria-label="Editar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button type="button" id="btn-excluir-pessoa" class="icon-btn" aria-label="Excluir">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+        <button type="button" id="btn-fechar-modal-pessoa" class="icon-btn" aria-label="Fechar">✕</button>
+      </div>
+      <h3 id="modal-pessoa-nome">Nome</h3>
+      <p class="modal-subtitle" id="modal-pessoa-resumo"></p>
+
+      <div id="modal-pessoa-edit-form" style="display:none;">
+        <div class="field">
+          <label for="modal-pessoa-edit-nome">Nome</label>
+          <input type="text" id="modal-pessoa-edit-nome" placeholder="Nome">
+        </div>
+        <div class="field">
+          <label for="modal-pessoa-edit-telefone">Telefone</label>
+          <input type="tel" id="modal-pessoa-edit-telefone" placeholder="Telefone (opcional)">
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancelar-edicao-pessoa" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-salvar-edicao-pessoa" class="btn-primary">Salvar</button>
+        </div>
+      </div>
+
+      <div id="modal-pessoa-lista-cirurgias"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ==========================================================================
+  // ---------- Navegação entre abas principais ----------
+  // ==========================================================================
+  const buttons = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  const headerTitle = document.getElementById('header-title');
+  const headerSubtitle = document.getElementById('header-subtitle');
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      panels.forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      headerTitle.textContent = btn.dataset.title;
+      headerSubtitle.textContent = btn.dataset.subtitle;
+      saveLastTab(tab);
+    });
+  });
+
+  // ---------- Armazenamento simples (localStorage) para preferências ----------
+  const STORAGE_PREFIX = 'gestao_cirurgica:';
+  function storageGet(key){ try{ return localStorage.getItem(STORAGE_PREFIX + key); }catch(e){ return null; } }
+  function storageSet(key, value){ try{ localStorage.setItem(STORAGE_PREFIX + key, value); }catch(e){} }
+
+  function saveLastTab(tab){ storageSet('last_tab', tab); }
+  function restoreLastTab(){
+    const tab = storageGet('last_tab');
+    if(tab){
+      const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+      if(btn) btn.click();
+    }
+  }
+
+  // ==========================================================================
+  // ---------- Armazenamento offline (IndexedDB) ----------
+  // ==========================================================================
+  const IDB_NOME = 'gestao_cirurgica_db';
+  const IDB_VERSAO = 1;
+  let idbPromise = null;
+
+  function idbAbrir(){
+    if(idbPromise) return idbPromise;
+    idbPromise = new Promise((resolve, reject) => {
+      if(!('indexedDB' in window)){ reject(new Error('IndexedDB não suportado neste navegador.')); return; }
+      const req = indexedDB.open(IDB_NOME, IDB_VERSAO);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if(!db.objectStoreNames.contains('cirurgias')) db.createObjectStore('cirurgias', { keyPath: 'id' });
+        if(!db.objectStoreNames.contains('instrumentadores')) db.createObjectStore('instrumentadores', { keyPath: 'nomeKey' });
+        if(!db.objectStoreNames.contains('medicos')) db.createObjectStore('medicos', { keyPath: 'nomeKey' });
+        if(!db.objectStoreNames.contains('hospitais')) db.createObjectStore('hospitais', { keyPath: 'nomeKey' });
+        if(!db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'key' });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return idbPromise;
+  }
+  function idbPedido(req){ return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
+  async function idbGetAll(nomeStore){ const db = await idbAbrir(); const store = db.transaction(nomeStore, 'readonly').objectStore(nomeStore); return idbPedido(store.getAll()); }
+  async function idbSubstituirTudo(nomeStore, itens){
+    const db = await idbAbrir();
+    const tx = db.transaction(nomeStore, 'readwrite');
+    tx.objectStore(nomeStore).clear();
+    itens.forEach(item => tx.objectStore(nomeStore).put(item));
+    return new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+  }
+  async function idbKvGet(chave){ const db = await idbAbrir(); const store = db.transaction('kv', 'readonly').objectStore('kv'); const r = await idbPedido(store.get(chave)); return r ? r.valor : undefined; }
+  async function idbKvSet(chave, valor){
+    const db = await idbAbrir();
+    const store = db.transaction('kv', 'readwrite').objectStore('kv');
+    store.put({ key: chave, valor });
+    return new Promise((resolve, reject) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => reject(store.transaction.error); });
+  }
+
+  // ==========================================================================
+  // ---------- Dados: cirurgias e pessoas (instrumentador / médico / hospital) ----------
+  // ==========================================================================
+  // cirurgia: { id, nomeCirurgia, hospital, data, medico, instrumentador,
+  //             valorTotal, valorInstrumentador, atualizadoEm, excluidoEm }
+  // pessoa:   { nomeKey, nome, telefone, atualizadoEm, excluidoEm }
+
+  let cirurgias = [];
+  let pessoas = { instrumentador: {}, medico: {}, hospital: {} };
+
+  const TIPOS_PESSOA = {
+    instrumentador: { store: 'instrumentadores', label: 'instrumentador', labelCap: 'Instrumentador', campoCirurgia: 'instrumentador' },
+    medico:         { store: 'medicos',          label: 'médico',        labelCap: 'Médico',         campoCirurgia: 'medico' },
+    hospital:       { store: 'hospitais',        label: 'hospital',      labelCap: 'Hospital',       campoCirurgia: 'hospital' }
+  };
+
+  function cirurgiasAtivas(){ return cirurgias.filter(c => !c.excluidoEm); }
+  function pessoasAtivas(tipo){ return Object.values(pessoas[tipo]).filter(p => !p.excluidoEm); }
+
+  async function loadData(){
+    cirurgias = await idbGetAll('cirurgias');
+    for(const tipo of Object.keys(TIPOS_PESSOA)){
+      const arr = await idbGetAll(TIPOS_PESSOA[tipo].store);
+      pessoas[tipo] = {};
+      arr.forEach(p => { pessoas[tipo][p.nomeKey] = p; });
+    }
+    await migrarDadosAntigos();
+    renderCirurgias();
+    renderPessoas();
+    restoreLastTab();
+    inicializarSincronizacao();
+  }
+
+  async function migrarDadosAntigos(){
+    let alterou = false;
+    cirurgias.forEach(c => {
+      if(c.atualizadoEm === undefined){ c.atualizadoEm = new Date().toISOString(); alterou = true; }
+      if(c.excluidoEm === undefined){ c.excluidoEm = null; alterou = true; }
+      if(c.pagoInstrumentador === undefined){ c.pagoInstrumentador = false; alterou = true; }
+      if(c.dataPagamentoInstrumentador === undefined){ c.dataPagamentoInstrumentador = null; alterou = true; }
+    });
+    if(alterou) await idbSubstituirTudo('cirurgias', cirurgias);
+  }
+
+  async function marcarPagamentoInstrumentador(id, pago){
+    const idx = cirurgias.findIndex(c => c.id === id);
+    if(idx < 0) return;
+    const agora = new Date().toISOString();
+    cirurgias[idx].pagoInstrumentador = pago;
+    cirurgias[idx].dataPagamentoInstrumentador = pago ? agora : null;
+    cirurgias[idx].atualizadoEm = agora;
+    await saveCirurgias();
+    renderCirurgias();
+  }
+
+  async function saveCirurgias(){ await idbSubstituirTudo('cirurgias', cirurgias); agendarSincronizacao(); }
+  async function savePessoas(tipo){
+    const arr = Object.values(pessoas[tipo]);
+    await idbSubstituirTudo(TIPOS_PESSOA[tipo].store, arr);
+    agendarSincronizacao();
+  }
+
+  // Garante que a pessoa citada em uma cirurgia (hospital/médico/instrumentador)
+  // exista cadastrada em Clientes, criando automaticamente quando necessário —
+  // mesma lógica do app-modelo (clientes surgem sozinhos ao registrar vendas).
+  async function garantirPessoa(tipo, nome){
+    const nomeLimpo = (nome || '').trim();
+    if(!nomeLimpo) return;
+    const key = nomeLimpo.toLowerCase();
+    if(pessoas[tipo][key] && !pessoas[tipo][key].excluidoEm) return;
+    pessoas[tipo][key] = {
+      nomeKey: key, nome: nomeLimpo, telefone: (pessoas[tipo][key] && pessoas[tipo][key].telefone) || '',
+      atualizadoEm: new Date().toISOString(), excluidoEm: null
+    };
+    await savePessoas(tipo);
+  }
+
+  // ==========================================================================
+  // ---------- Formulário: Cirurgias ----------
+  // ==========================================================================
+  const formCirurgia = document.getElementById('form-cirurgia');
+  const btnNovaCirurgia = document.getElementById('btn-nova-cirurgia');
+  const btnCancelarCirurgia = document.getElementById('btn-cancelar-cirurgia');
+  const fNomeCirurgia = document.getElementById('f-nome-cirurgia');
+  const fHospital = document.getElementById('f-hospital');
+  const fData = document.getElementById('f-data');
+  const fMedico = document.getElementById('f-medico');
+  const fInstrumentador = document.getElementById('f-instrumentador');
+  const fValorTotal = document.getElementById('f-valor-total');
+  const fValorInstrumentador = document.getElementById('f-valor-instrumentador');
+  const fPagoInstrumentador = document.getElementById('f-pago-instrumentador');
+  const formEditBadge = document.getElementById('form-edit-badge');
+
+  let editingCirurgiaId = null;
+
+  function abrirFormCirurgia(){ formCirurgia.style.display = 'flex'; btnNovaCirurgia.style.display = 'none'; fNomeCirurgia.focus(); }
+  function fecharFormCirurgia(){
+    formCirurgia.style.display = 'none'; btnNovaCirurgia.style.display = 'flex';
+    formCirurgia.reset(); editingCirurgiaId = null; formEditBadge.style.display = 'none';
+    esconderTodasSugestoes();
+  }
+  btnNovaCirurgia.addEventListener('click', abrirFormCirurgia);
+  btnCancelarCirurgia.addEventListener('click', fecharFormCirurgia);
+
+  formCirurgia.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const agora = new Date().toISOString();
+    const jaEstavaPago = editingCirurgiaId ? (cirurgias.find(c => c.id === editingCirurgiaId) || {}).pagoInstrumentador : false;
+    const dados = {
+      nomeCirurgia: fNomeCirurgia.value.trim(),
+      hospital: fHospital.value.trim(),
+      data: fData.value || '',
+      medico: fMedico.value.trim(),
+      instrumentador: fInstrumentador.value.trim(),
+      valorTotal: parseFloat(fValorTotal.value) || 0,
+      valorInstrumentador: parseFloat(fValorInstrumentador.value) || 0,
+      pagoInstrumentador: fPagoInstrumentador.checked,
+      dataPagamentoInstrumentador: fPagoInstrumentador.checked ? (jaEstavaPago ? (cirurgias.find(c => c.id === editingCirurgiaId) || {}).dataPagamentoInstrumentador : agora) : null,
+      atualizadoEm: agora, excluidoEm: null
+    };
+
+    if(editingCirurgiaId){
+      const idx = cirurgias.findIndex(c => c.id === editingCirurgiaId);
+      if(idx >= 0) cirurgias[idx] = Object.assign({}, cirurgias[idx], dados);
+    }else{
+      cirurgias.push(Object.assign({ id: 'c' + Date.now() + Math.floor(Math.random()*1000) }, dados));
+    }
+    await saveCirurgias();
+
+    if(dados.hospital) await garantirPessoa('hospital', dados.hospital);
+    if(dados.medico) await garantirPessoa('medico', dados.medico);
+    if(dados.instrumentador) await garantirPessoa('instrumentador', dados.instrumentador);
+
+    renderCirurgias();
+    renderPessoas();
+    fecharFormCirurgia();
+  });
+
+  function editarCirurgia(id){
+    const c = cirurgias.find(x => x.id === id);
+    if(!c) return;
+    editingCirurgiaId = id;
+    fNomeCirurgia.value = c.nomeCirurgia || '';
+    fHospital.value = c.hospital || '';
+    fData.value = c.data || '';
+    fMedico.value = c.medico || '';
+    fInstrumentador.value = c.instrumentador || '';
+    fValorTotal.value = c.valorTotal || '';
+    fValorInstrumentador.value = c.valorInstrumentador || '';
+    fPagoInstrumentador.checked = !!c.pagoInstrumentador;
+    formEditBadge.style.display = 'block';
+    abrirFormCirurgia();
+  }
+
+  async function excluirCirurgia(id){
+    if(!confirm('Excluir esta cirurgia?')) return;
+    const idx = cirurgias.findIndex(c => c.id === id);
+    if(idx >= 0){ cirurgias[idx].excluidoEm = new Date().toISOString(); cirurgias[idx].atualizadoEm = new Date().toISOString(); }
+    await saveCirurgias();
+    renderCirurgias();
+  }
+
+  // ---- Sugestões de autocompletar (hospital / médico / instrumentador) ----
+  function configurarSugestoes(inputEl, dropdownEl, tipo){
+    inputEl.addEventListener('input', () => mostrarSugestoes(inputEl, dropdownEl, tipo));
+    inputEl.addEventListener('focus', () => mostrarSugestoes(inputEl, dropdownEl, tipo));
+    inputEl.addEventListener('blur', () => setTimeout(() => { dropdownEl.style.display = 'none'; }, 150));
+  }
+  function mostrarSugestoes(inputEl, dropdownEl, tipo){
+    const filtro = inputEl.value.trim().toLowerCase();
+    const lista = pessoasAtivas(tipo)
+      .filter(p => !filtro || p.nome.toLowerCase().includes(filtro))
+      .sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+      .slice(0, 8);
+    if(!lista.length){ dropdownEl.style.display = 'none'; return; }
+    dropdownEl.innerHTML = lista.map(p => `
+      <div class="suggestion-item" data-nome="${escapeHtml(p.nome)}">
+        <div class="suggestion-name">${escapeHtml(p.nome)}</div>
+        ${p.telefone ? `<div class="suggestion-phone">${escapeHtml(p.telefone)}</div>` : ''}
+      </div>
+    `).join('');
+    dropdownEl.querySelectorAll('.suggestion-item').forEach(el => {
+      el.addEventListener('mousedown', () => { inputEl.value = el.dataset.nome; dropdownEl.style.display = 'none'; });
+    });
+    dropdownEl.style.display = 'block';
+  }
+  function esconderTodasSugestoes(){
+    ['sugestoes-hospital','sugestoes-medico','sugestoes-instrumentador'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+  }
+  configurarSugestoes(fHospital, document.getElementById('sugestoes-hospital'), 'hospital');
+  configurarSugestoes(fMedico, document.getElementById('sugestoes-medico'), 'medico');
+  configurarSugestoes(fInstrumentador, document.getElementById('sugestoes-instrumentador'), 'instrumentador');
+
+  // ---- Filtros ----
+  const btnToggleFiltros = document.getElementById('btn-toggle-filtros');
+  const painelFiltros = document.getElementById('painel-filtros');
+  const fFiltroTexto = document.getElementById('f-filtro-texto');
+  const fFiltroDe = document.getElementById('f-filtro-de');
+  const fFiltroAte = document.getElementById('f-filtro-ate');
+  const btnLimparFiltros = document.getElementById('btn-limpar-filtros');
+  const filtroBadge = document.getElementById('filtro-badge');
+
+  btnToggleFiltros.addEventListener('click', () => {
+    painelFiltros.style.display = painelFiltros.style.display === 'none' ? 'flex' : 'none';
+  });
+  [fFiltroTexto, fFiltroDe, fFiltroAte].forEach(el => el.addEventListener('input', () => { atualizarBadgeFiltros(); renderCirurgias(); }));
+  btnLimparFiltros.addEventListener('click', () => {
+    fFiltroTexto.value = ''; fFiltroDe.value = ''; fFiltroAte.value = '';
+    atualizarBadgeFiltros(); renderCirurgias();
+  });
+  function contarFiltrosAtivos(){
+    let n = 0;
+    if(fFiltroTexto.value.trim()) n++;
+    if(fFiltroDe.value) n++;
+    if(fFiltroAte.value) n++;
+    return n;
+  }
+  function atualizarBadgeFiltros(){
+    const n = contarFiltrosAtivos();
+    filtroBadge.textContent = n; filtroBadge.style.display = n > 0 ? 'flex' : 'none';
+  }
+  function aplicarFiltros(lista){
+    const texto = fFiltroTexto.value.trim().toLowerCase();
+    const de = fFiltroDe.value; const ate = fFiltroAte.value;
+    return lista.filter(c => {
+      if(texto){
+        const alvo = [c.nomeCirurgia, c.hospital, c.medico, c.instrumentador].join(' ').toLowerCase();
+        if(!alvo.includes(texto)) return false;
+      }
+      if(de && c.data && c.data < de) return false;
+      if(ate && c.data && c.data > ate) return false;
+      return true;
+    });
+  }
+
+  // ---- Formatação ----
+  function formatMoney(v){ return (v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+  function formatDate(iso){
+    if(!iso) return '';
+    const [y,m,d] = iso.split('-');
+    if(!y||!m||!d) return iso;
+    return `${d}/${m}/${y}`;
+  }
+  function escapeHtml(str){
+    return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  // ---- Renderização da lista de cirurgias ----
+  function renderCirurgias(){
+    const lista = document.getElementById('lista-cirurgias');
+    const emptyGeral = document.getElementById('cirurgias-empty');
+    const emptyFiltro = document.getElementById('cirurgias-empty-filtro');
+    const ativas = cirurgiasAtivas().sort((a,b) => (b.data || '').localeCompare(a.data || '') || (b.atualizadoEm||'').localeCompare(a.atualizadoEm||''));
+    const filtradas = aplicarFiltros(ativas);
+
+    if(typeof renderDashboard === 'function') renderDashboard();
+
+    if(!ativas.length){
+      lista.innerHTML = ''; emptyGeral.style.display = 'flex'; emptyFiltro.style.display = 'none';
+      return;
+    }
+    if(!filtradas.length){
+      lista.innerHTML = ''; emptyGeral.style.display = 'none'; emptyFiltro.style.display = 'flex';
+      return;
+    }
+    emptyGeral.style.display = 'none'; emptyFiltro.style.display = 'none';
+
+    lista.innerHTML = filtradas.map(c => `
+      <div class="item-card">
+        <div class="top-row">
+          <div>
+            <div class="title">${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
+            <div class="meta">
+              ${c.hospital ? `<div><b>Hospital:</b> ${escapeHtml(c.hospital)}</div>` : ''}
+              ${c.data ? `<div><b>Data:</b> ${formatDate(c.data)}</div>` : ''}
+              ${c.medico ? `<div><b>Médico:</b> ${escapeHtml(c.medico)}</div>` : ''}
+              ${c.instrumentador ? `<div><b>Instrumentador:</b> ${escapeHtml(c.instrumentador)}</div>` : ''}
+            </div>
+          </div>
+          <div class="value">${c.valorTotal ? formatMoney(c.valorTotal) : ''}</div>
+        </div>
+        <div class="bottom-row">
+          <div class="badge" style="${c.valorInstrumentador ? (c.pagoInstrumentador ? 'background:var(--olive-bg);color:var(--olive);' : 'background:var(--amber-bg);color:var(--amber);') : ''}">
+            ${c.valorInstrumentador ? (formatMoney(c.valorInstrumentador) + ' · ' + (c.pagoInstrumentador ? 'Pago' : 'Pendente')) : 'Sem valor de instrumentador'}
+          </div>
+          <div class="row-actions">
+            <button class="icon-btn" aria-label="Editar" onclick="editarCirurgia('${c.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+            <button class="icon-btn" aria-label="Excluir" onclick="excluirCirurgia('${c.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ==========================================================================
+  // ---------- Dashboard geral de cirurgias ----------
+  // ==========================================================================
+  const dashSubTabs = document.querySelectorAll('#tab-dashboard .sub-tabbar .sub-tab-btn');
+  const dashGeralEl = document.getElementById('dash-geral');
+  const dashInstrumentadorEl = document.getElementById('dash-instrumentador');
+  dashSubTabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      dashSubTabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const modo = btn.dataset.dash;
+      dashGeralEl.style.display = modo === 'geral' ? 'block' : 'none';
+      dashInstrumentadorEl.style.display = modo === 'instrumentador' ? 'block' : 'none';
+      if(modo === 'instrumentador') renderDashboardInstrumentador();
+    });
+  });
+
+  const fDashDe = document.getElementById('f-dash-de');
+  const fDashAte = document.getElementById('f-dash-ate');
+  const fDashHospital = document.getElementById('f-dash-hospital');
+  const fDashMedico = document.getElementById('f-dash-medico');
+  const btnDashLimpar = document.getElementById('btn-dash-limpar');
+
+  [fDashDe, fDashAte, fDashHospital, fDashMedico].forEach(el => el.addEventListener('input', renderDashboard));
+  fDashHospital.addEventListener('change', renderDashboard);
+  fDashMedico.addEventListener('change', renderDashboard);
+  btnDashLimpar.addEventListener('click', () => {
+    fDashDe.value = ''; fDashAte.value = ''; fDashHospital.value = ''; fDashMedico.value = '';
+    renderDashboard();
+  });
+
+  function atualizarSelectsDashboard(){
+    const preencherSelect = (selectEl, tipo) => {
+      const valorAtual = selectEl.value;
+      const nomes = pessoasAtivas(tipo).map(p => p.nome).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+      selectEl.innerHTML = '<option value="">Todos</option>' + nomes.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      if(nomes.includes(valorAtual)) selectEl.value = valorAtual;
+    };
+    preencherSelect(fDashHospital, 'hospital');
+    preencherSelect(fDashMedico, 'medico');
+  }
+
+  function renderDashboard(){
+    atualizarSelectsDashboard();
+    const de = fDashDe.value, ate = fDashAte.value;
+    const hospital = fDashHospital.value, medico = fDashMedico.value;
+
+    const filtradas = cirurgiasAtivas().filter(c => {
+      if(de && c.data && c.data < de) return false;
+      if(ate && c.data && c.data > ate) return false;
+      if(hospital && c.hospital !== hospital) return false;
+      if(medico && c.medico !== medico) return false;
+      return true;
+    });
+
+    const totalFaturado = filtradas.reduce((s, c) => s + (c.valorTotal || 0), 0);
+    const qtd = filtradas.length;
+    const ticketMedio = qtd ? totalFaturado / qtd : 0;
+
+    document.getElementById('dash-total-faturado').textContent = formatMoney(totalFaturado);
+    document.getElementById('dash-qtd-cirurgias').textContent = String(qtd);
+    document.getElementById('dash-ticket-medio').textContent = formatMoney(ticketMedio);
+
+    document.getElementById('dash-empty').style.display = qtd ? 'none' : 'flex';
+
+    function montarRanking(campo){
+      const mapa = new Map();
+      filtradas.forEach(c => {
+        const chave = (c[campo] || '').trim();
+        if(!chave) return;
+        const atual = mapa.get(chave) || { qtd: 0, valor: 0 };
+        atual.qtd += 1; atual.valor += (c.valorTotal || 0);
+        mapa.set(chave, atual);
+      });
+      return Array.from(mapa.entries()).sort((a,b) => b[1].valor - a[1].valor).slice(0, 5);
+    }
+    function renderRankingEm(elId, campo){
+      const el = document.getElementById(elId);
+      const ranking = montarRanking(campo);
+      if(!ranking.length){ el.innerHTML = '<p class="modal-subtitle" style="margin:0;">Sem dados no período.</p>'; return; }
+      el.innerHTML = ranking.map(([nome, dados]) => `
+        <div class="dash-mini-row" style="padding:6px 0; border-bottom:1px solid var(--border);">
+          <span>${escapeHtml(nome)} <span style="color:var(--ink-soft);">(${dados.qtd})</span></span>
+          <strong>${formatMoney(dados.valor)}</strong>
+        </div>
+      `).join('');
+    }
+    renderRankingEm('dash-ranking-hospital', 'hospital');
+    renderRankingEm('dash-ranking-medico', 'medico');
+    if(!dashInstrumentadorEl || dashInstrumentadorEl.style.display !== 'none') renderDashboardInstrumentador();
+  }
+
+  // ---- Dashboard: quanto pagar a cada instrumentador ----
+  let instrumentadoresExpandidos = new Set();
+
+  function renderDashboardInstrumentador(){
+    const ativas = cirurgiasAtivas().filter(c => (c.instrumentador || '').trim());
+    const mapa = new Map();
+    ativas.forEach(c => {
+      const nome = c.instrumentador.trim();
+      const atual = mapa.get(nome) || { pendente: 0, pago: 0, cirurgias: [] };
+      if(c.pagoInstrumentador) atual.pago += (c.valorInstrumentador || 0);
+      else atual.pendente += (c.valorInstrumentador || 0);
+      atual.cirurgias.push(c);
+      mapa.set(nome, atual);
+    });
+
+    const totalPendente = Array.from(mapa.values()).reduce((s, d) => s + d.pendente, 0);
+    const totalPago = Array.from(mapa.values()).reduce((s, d) => s + d.pago, 0);
+    document.getElementById('dash-total-a-pagar').textContent = formatMoney(totalPendente);
+    document.getElementById('dash-total-pago').textContent = formatMoney(totalPago);
+
+    const lista = document.getElementById('dash-lista-instrumentadores');
+    const empty = document.getElementById('dash-instrumentador-empty');
+    const nomes = Array.from(mapa.keys()).sort((a,b) => mapa.get(b).pendente - mapa.get(a).pendente);
+
+    if(!nomes.length){ lista.innerHTML = ''; empty.style.display = 'flex'; return; }
+    empty.style.display = 'none';
+
+    lista.innerHTML = nomes.map(nome => {
+      const dados = mapa.get(nome);
+      const expandido = instrumentadoresExpandidos.has(nome);
+      const cirurgiasOrdenadas = dados.cirurgias.slice().sort((a,b) => (b.data||'').localeCompare(a.data||''));
+      return `
+        <div class="item-card">
+          <div class="top-row" style="cursor:pointer;" onclick="toggleInstrumentadorExpandido('${escapeHtml(nome).replace(/'/g,"\\'")}')">
+            <div>
+              <div class="title">${escapeHtml(nome)}</div>
+              <div class="meta">${dados.cirurgias.length} cirurgia(s) ${dados.pago ? '· ' + formatMoney(dados.pago) + ' pago' : ''}</div>
+            </div>
+            <div class="value" style="color:${dados.pendente ? 'var(--amber)' : 'var(--olive)'};">${dados.pendente ? formatMoney(dados.pendente) : 'Em dia'}</div>
+          </div>
+          ${expandido ? `
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+              ${cirurgiasOrdenadas.map(c => `
+                <div style="border-top:1px solid var(--border); padding-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                  <div style="min-width:0;">
+                    <div style="font-weight:600; font-size:13.5px;">${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
+                    <div class="meta" style="margin-top:1px;">${c.data ? formatDate(c.data) : ''}${c.hospital ? ' · ' + escapeHtml(c.hospital) : ''} · ${formatMoney(c.valorInstrumentador || 0)}</div>
+                  </div>
+                  <button type="button" class="btn-secondary" style="flex:unset; padding:7px 10px; font-size:12px; white-space:nowrap;"
+                    onclick="event.stopPropagation(); marcarPagamentoInstrumentador('${c.id}', ${!c.pagoInstrumentador})">
+                    ${c.pagoInstrumentador ? 'Marcar pendente' : 'Marcar pago'}
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function toggleInstrumentadorExpandido(nome){
+    if(instrumentadoresExpandidos.has(nome)) instrumentadoresExpandidos.delete(nome);
+    else instrumentadoresExpandidos.add(nome);
+    renderDashboardInstrumentador();
+  }
+
+  // ==========================================================================
+  // ---------- Aba Clientes: instrumentador / médico / hospital ----------
+  // ==========================================================================
+  let tipoPessoaAtivo = 'instrumentador';
+  const subTabButtons = document.querySelectorAll('.sub-tab-btn');
+  const btnNovaPessoa = document.getElementById('btn-nova-pessoa');
+  const btnNovaPessoaLabel = document.getElementById('btn-nova-pessoa-label');
+  const formPessoa = document.getElementById('form-pessoa');
+  const btnCancelarPessoa = document.getElementById('btn-cancelar-pessoa');
+  const fPessoaNome = document.getElementById('f-pessoa-nome');
+  const fPessoaTelefone = document.getElementById('f-pessoa-telefone');
+  const formPessoaEditBadge = document.getElementById('form-pessoa-edit-badge');
+  const pessoasEmptyTitulo = document.getElementById('pessoas-empty-titulo');
+  let editingPessoaKey = null;
+
+  subTabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      subTabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tipoPessoaAtivo = btn.dataset.tipo;
+      fecharFormPessoa();
+      renderPessoas();
+    });
+  });
+
+  function abrirFormPessoa(){
+    btnNovaPessoaLabel.textContent = 'Novo ' + TIPOS_PESSOA[tipoPessoaAtivo].label;
+    formPessoa.style.display = 'flex'; btnNovaPessoa.style.display = 'none'; fPessoaNome.focus();
+  }
+  function fecharFormPessoa(){
+    formPessoa.style.display = 'none'; btnNovaPessoa.style.display = 'flex';
+    formPessoa.reset(); editingPessoaKey = null; formPessoaEditBadge.style.display = 'none';
+  }
+  btnNovaPessoa.addEventListener('click', abrirFormPessoa);
+  btnCancelarPessoa.addEventListener('click', fecharFormPessoa);
+
+  formPessoa.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = fPessoaNome.value.trim();
+    if(!nome){ alert('Informe ao menos o nome.'); return; }
+    const key = nome.toLowerCase();
+    const agora = new Date().toISOString();
+    if(editingPessoaKey && editingPessoaKey !== key && pessoas[tipoPessoaAtivo][editingPessoaKey]){
+      pessoas[tipoPessoaAtivo][editingPessoaKey].excluidoEm = agora;
+      pessoas[tipoPessoaAtivo][editingPessoaKey].atualizadoEm = agora;
+    }
+    pessoas[tipoPessoaAtivo][key] = {
+      nomeKey: key, nome, telefone: fPessoaTelefone.value.trim(), atualizadoEm: agora, excluidoEm: null
+    };
+    await savePessoas(tipoPessoaAtivo);
+    renderPessoas();
+    fecharFormPessoa();
+  });
+
+  function renderPessoas(){
+    if(typeof atualizarSelectsDashboard === 'function') atualizarSelectsDashboard();
+    const lista = document.getElementById('lista-pessoas');
+    const empty = document.getElementById('pessoas-empty');
+    const info = TIPOS_PESSOA[tipoPessoaAtivo];
+    pessoasEmptyTitulo.textContent = 'Nenhum ' + info.label + ' cadastrado';
+    btnNovaPessoaLabel.textContent = 'Novo ' + info.label;
+
+    const ativos = pessoasAtivas(tipoPessoaAtivo).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    if(!ativos.length){ lista.innerHTML = ''; empty.style.display = 'flex'; return; }
+    empty.style.display = 'none';
+
+    lista.innerHTML = ativos.map(p => `
+      <div class="item-card" style="cursor:pointer;" onclick="abrirModalPessoa('${escapeHtml(p.nomeKey)}')">
+        <div class="top-row">
+          <div>
+            <div class="title">${escapeHtml(p.nome)}</div>
+            ${p.telefone ? `<div class="meta">${escapeHtml(p.telefone)}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ---- Modal de detalhe da pessoa (edição, exclusão, cirurgias relacionadas) ----
+  const modalPessoa = document.getElementById('modal-pessoa-detalhe');
+  const modalPessoaNome = document.getElementById('modal-pessoa-nome');
+  const modalPessoaResumo = document.getElementById('modal-pessoa-resumo');
+  const modalPessoaListaCirurgias = document.getElementById('modal-pessoa-lista-cirurgias');
+  const modalPessoaEditForm = document.getElementById('modal-pessoa-edit-form');
+  const modalPessoaEditNome = document.getElementById('modal-pessoa-edit-nome');
+  const modalPessoaEditTelefone = document.getElementById('modal-pessoa-edit-telefone');
+  let pessoaAbertaKey = null;
+
+  function abrirModalPessoa(nomeKey){
+    pessoaAbertaKey = nomeKey;
+    const p = pessoas[tipoPessoaAtivo][nomeKey];
+    if(!p) return;
+    modalPessoaNome.textContent = p.nome;
+    modalPessoaResumo.textContent = p.telefone || 'Sem telefone cadastrado';
+    modalPessoaEditForm.style.display = 'none';
+
+    const campo = TIPOS_PESSOA[tipoPessoaAtivo].campoCirurgia;
+    const relacionadas = cirurgiasAtivas()
+      .filter(c => (c[campo] || '').trim().toLowerCase() === p.nome.trim().toLowerCase())
+      .sort((a,b) => (b.data || '').localeCompare(a.data || ''));
+
+    if(!relacionadas.length){
+      modalPessoaListaCirurgias.innerHTML = '<p class="modal-subtitle">Nenhuma cirurgia registrada com este nome ainda.</p>';
+    }else{
+      modalPessoaListaCirurgias.innerHTML = relacionadas.map(c => `
+        <div class="item-card">
+          <div class="top-row">
+            <div>
+              <div class="title">${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
+              <div class="meta">${c.data ? formatDate(c.data) : ''}${c.hospital ? ' · ' + escapeHtml(c.hospital) : ''}</div>
+            </div>
+            <div class="value">${c.valorTotal ? formatMoney(c.valorTotal) : ''}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+    modalPessoa.classList.remove('hidden');
+  }
+  document.getElementById('btn-fechar-modal-pessoa').addEventListener('click', () => modalPessoa.classList.add('hidden'));
+
+  document.getElementById('btn-editar-pessoa').addEventListener('click', () => {
+    const p = pessoas[tipoPessoaAtivo][pessoaAbertaKey];
+    if(!p) return;
+    modalPessoaEditNome.value = p.nome; modalPessoaEditTelefone.value = p.telefone || '';
+    modalPessoaEditForm.style.display = 'flex';
+  });
+  document.getElementById('btn-cancelar-edicao-pessoa').addEventListener('click', () => { modalPessoaEditForm.style.display = 'none'; });
+  document.getElementById('btn-salvar-edicao-pessoa').addEventListener('click', async () => {
+    const novoNome = modalPessoaEditNome.value.trim();
+    if(!novoNome){ alert('Informe o nome.'); return; }
+    const novoKey = novoNome.toLowerCase();
+    const agora = new Date().toISOString();
+    const antigo = pessoas[tipoPessoaAtivo][pessoaAbertaKey];
+    if(novoKey !== pessoaAbertaKey){
+      antigo.excluidoEm = agora; antigo.atualizadoEm = agora;
+    }
+    pessoas[tipoPessoaAtivo][novoKey] = {
+      nomeKey: novoKey, nome: novoNome, telefone: modalPessoaEditTelefone.value.trim(), atualizadoEm: agora, excluidoEm: null
+    };
+    await savePessoas(tipoPessoaAtivo);
+    pessoaAbertaKey = novoKey;
+    renderPessoas();
+    abrirModalPessoa(novoKey);
+    modalPessoaEditForm.style.display = 'none';
+  });
+
+  document.getElementById('btn-excluir-pessoa').addEventListener('click', async () => {
+    const p = pessoas[tipoPessoaAtivo][pessoaAbertaKey];
+    if(!p) return;
+    if(!confirm('Excluir "' + p.nome + '"? As cirurgias já registradas com este nome não serão apagadas.')) return;
+    const agora = new Date().toISOString();
+    p.excluidoEm = agora; p.atualizadoEm = agora;
+    await savePessoas(tipoPessoaAtivo);
+    modalPessoa.classList.add('hidden');
+    renderPessoas();
+  });
+
+  // ==========================================================================
+  // ---------- Backup manual (JSON) ----------
+  // ==========================================================================
+  document.getElementById('btn-backup-baixar').addEventListener('click', () => {
+    const dados = { cirurgias, pessoas, exportadoEm: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'backup-gestao-cirurgica-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+  });
+  document.getElementById('btn-backup-restaurar').addEventListener('click', () => {
+    document.getElementById('input-backup-arquivo').click();
+  });
+  document.getElementById('input-backup-arquivo').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    try{
+      const texto = await file.text();
+      const dados = JSON.parse(texto);
+      if(!confirm('Isso vai substituir os dados atuais deste aparelho pelos dados do arquivo. Continuar?')) return;
+      cirurgias = dados.cirurgias || [];
+      pessoas = dados.pessoas || { instrumentador: {}, medico: {}, hospital: {} };
+      await idbSubstituirTudo('cirurgias', cirurgias);
+      for(const tipo of Object.keys(TIPOS_PESSOA)) await idbSubstituirTudo(TIPOS_PESSOA[tipo].store, Object.values(pessoas[tipo] || {}));
+      renderCirurgias(); renderPessoas();
+      alert('Backup restaurado com sucesso.');
+    }catch(err){
+      alert('Não foi possível ler este arquivo de backup.');
+    }
+    e.target.value = '';
+  });
+
+  // ==========================================================================
+  // ---------- Sincronização com o Excel Online (Microsoft Graph API) ----------
+  // ==========================================================================
+  // 1. Tudo é sempre salvo primeiro no IndexedDB deste aparelho — o app funciona
+  //    100% offline.
+  // 2. Quando há internet e o dono está logado com a conta Microsoft, o app lê
+  //    a planilha, mescla com os dados locais (o registro mais recente vence,
+  //    usando o campo "atualizadoEm") e regrava a planilha inteira.
+  // 3. Cada tipo de dado tem sua própria aba na planilha: Cirurgias,
+  //    Instrumentadores, Medicos, Hospitais.
+
+  const COLUNAS_CIRURGIAS = ['id','nomeCirurgia','hospital','data','medico','instrumentador','valorTotal','valorInstrumentador','pagoInstrumentador','dataPagamentoInstrumentador','atualizadoEm','excluidoEm'];
+  const COLUNAS_PESSOAS = ['nomeKey','nome','telefone','atualizadoEm','excluidoEm'];
+  const ABA_CIRURGIAS = 'Cirurgias';
+  const ABAS_PESSOAS = { instrumentador: 'Instrumentadores', medico: 'Medicos', hospital: 'Hospitais' };
+  const MSAL_SCOPES = ['Files.ReadWrite'];
+
+  let msalInstance = null;
+  let msalAccount = null;
+  let sincronizando = false;
+  let sincronizacaoPendente = false;
+  let syncDebounceTimer = null;
+
+  const syncDotEl = document.getElementById('sync-dot');
+  const syncStatusTextEl = document.getElementById('sync-status-text');
+  const headerSyncDotEl = document.getElementById('header-sync-dot');
+  const btnSyncConectar = document.getElementById('btn-sync-conectar');
+  const btnSyncAgora = document.getElementById('btn-sync-agora');
+  const btnSyncDesconectar = document.getElementById('btn-sync-desconectar');
+  const btnSyncToggleConfig = document.getElementById('btn-sync-toggle-config');
+  const syncConfigEl = document.getElementById('sync-config');
+  const fSyncClientId = document.getElementById('f-sync-client-id');
+  const fSyncLink = document.getElementById('f-sync-link');
+  const btnSyncSalvarConfig = document.getElementById('btn-sync-salvar-config');
+
+  function getConfigClientId(){ return storageGet('msal_client_id') || ''; }
+  function getConfigLinkPlanilha(){ return storageGet('planilha_link') || ''; }
+
+  btnSyncToggleConfig.addEventListener('click', () => {
+    const aberto = syncConfigEl.style.display !== 'none';
+    syncConfigEl.style.display = aberto ? 'none' : 'flex';
+    if(!aberto){ fSyncClientId.value = getConfigClientId(); fSyncLink.value = getConfigLinkPlanilha(); }
+  });
+  btnSyncSalvarConfig.addEventListener('click', async () => {
+    const clientId = fSyncClientId.value.trim();
+    const link = fSyncLink.value.trim();
+    if(!clientId || !link){ alert('Preencha o ID do aplicativo e o link da planilha.'); return; }
+    storageSet('msal_client_id', clientId);
+    storageSet('planilha_link', link);
+    await idbKvSet('planilha_ref', null);
+    syncConfigEl.style.display = 'none';
+    await inicializarMsal();
+    alert('Configuração salva. Agora clique em "Conectar com a Microsoft".');
+  });
+
+  function aguardarMsalCarregar(timeoutMs){
+    return new Promise((resolve) => {
+      if(typeof msal !== 'undefined'){ resolve(true); return; }
+      if(window.MSAL_FALHOU){ resolve(false); return; }
+      const inicio = Date.now();
+      const intervalo = setInterval(() => {
+        if(typeof msal !== 'undefined'){ clearInterval(intervalo); resolve(true); }
+        else if(window.MSAL_FALHOU || Date.now() - inicio > timeoutMs){ clearInterval(intervalo); resolve(typeof msal !== 'undefined'); }
+      }, 100);
+    });
+  }
+
+  async function inicializarMsal(){
+    const clientId = getConfigClientId();
+    if(!clientId){ atualizarStatusSincronizacao(); return; }
+    const carregou = await aguardarMsalCarregar(8000);
+    if(!carregou){
+      console.error('Biblioteca MSAL não carregou.');
+      atualizarStatusSincronizacao('erro', 'não foi possível carregar a biblioteca de login da Microsoft. Verifique sua conexão ou desative bloqueadores/extensões e recarregue a página.');
+      return;
+    }
+    try{
+      msalInstance = new msal.PublicClientApplication({
+        auth: { clientId: clientId, authority: 'https://login.microsoftonline.com/common', redirectUri: window.location.href.split('#')[0].split('?')[0] },
+        cache: { cacheLocation: 'localStorage' }
+      });
+      await msalInstance.initialize();
+      const resp = await msalInstance.handleRedirectPromise();
+      if(resp && resp.account){ msalAccount = resp.account; }
+      else{ const contas = msalInstance.getAllAccounts(); if(contas.length) msalAccount = contas[0]; }
+      if(msalAccount) msalInstance.setActiveAccount(msalAccount);
+    }catch(e){ console.error('Erro ao iniciar MSAL', e); }
+    atualizarStatusSincronizacao();
+    if(msalAccount && navigator.onLine) sincronizarTudo('inicializacao');
+  }
+
+  btnSyncConectar.addEventListener('click', async () => {
+    if(!getConfigClientId() || !getConfigLinkPlanilha()){
+      syncConfigEl.style.display = 'flex';
+      fSyncClientId.value = getConfigClientId(); fSyncLink.value = getConfigLinkPlanilha();
+      alert('Antes de conectar, preencha a configuração da integração abaixo.');
+      return;
+    }
+    if(!msalInstance) await inicializarMsal();
+    if(!msalInstance){ alert('Não foi possível carregar a biblioteca de login da Microsoft. Recarregue a página; se persistir, verifique sua conexão.'); return; }
+    try{ await msalInstance.loginRedirect({ scopes: MSAL_SCOPES }); }
+    catch(e){ console.error('Erro ao entrar com a Microsoft', e); alert('Não foi possível iniciar o login: ' + (e && e.message ? e.message : e)); }
+  });
+  btnSyncDesconectar.addEventListener('click', async () => {
+    if(!msalInstance || !msalAccount) return;
+    if(!confirm('Desconectar da Microsoft? Os dados salvos neste aparelho não serão apagados.')) return;
+    try{ await msalInstance.logoutRedirect({ account: msalAccount }); }catch(e){ console.error('Erro ao sair', e); }
+  });
+  btnSyncAgora.addEventListener('click', () => sincronizarTudo('manual'));
+
+  async function obterToken(){
+    if(!msalInstance || !msalAccount) throw new Error('Não conectado à Microsoft.');
+    try{ const r = await msalInstance.acquireTokenSilent({ scopes: MSAL_SCOPES, account: msalAccount }); return r.accessToken; }
+    catch(e){ await msalInstance.acquireTokenRedirect({ scopes: MSAL_SCOPES, account: msalAccount }); throw new Error('Redirecionando para novo login...'); }
+  }
+
+  async function graphFetch(caminho, opcoes){
+    opcoes = opcoes || {};
+    const token = await obterToken();
+    const resp = await fetch('https://graph.microsoft.com/v1.0' + caminho, Object.assign({}, opcoes, {
+      headers: Object.assign({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, opcoes.headers || {})
+    }));
+    if(!resp.ok){ const texto = await resp.text().catch(() => ''); throw new Error('Erro na planilha (' + resp.status + '): ' + texto.slice(0, 200)); }
+    if(resp.status === 204) return null;
+    return resp.json();
+  }
+
+  function codificarLinkCompartilhado(url){
+    const base64 = btoa(unescape(encodeURIComponent(url))).replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+    return 'u!' + base64;
+  }
+
+  async function resolverArquivoPlanilha(){
+    let ref = await idbKvGet('planilha_ref');
+    if(ref && ref.driveId && ref.itemId) return ref;
+    const link = getConfigLinkPlanilha();
+    if(!link) throw new Error('Link da planilha não configurado.');
+    const compartilhado = await graphFetch('/shares/' + codificarLinkCompartilhado(link) + '/driveItem?$select=id,parentReference');
+    ref = { driveId: compartilhado.parentReference.driveId, itemId: compartilhado.id };
+    await idbKvSet('planilha_ref', ref);
+    return ref;
+  }
+
+  function colunaParaLetra(n){
+    let letra = '';
+    while(n > 0){ const resto = (n - 1) % 26; letra = String.fromCharCode(65 + resto) + letra; n = Math.floor((n - 1) / 26); }
+    return letra;
+  }
+
+  async function lerAba(nomeAba){
+    const { driveId, itemId } = await resolverArquivoPlanilha();
+    const caminho = `/drives/${driveId}/items/${itemId}/workbook/worksheets('${nomeAba}')/usedRange(valuesOnly=true)`;
+    const resultado = await graphFetch(caminho);
+    return (resultado && resultado.values) || [];
+  }
+
+  async function escreverAba(nomeAba, colunas, linhasDados){
+    const { driveId, itemId } = await resolverArquivoPlanilha();
+    const base = `/drives/${driveId}/items/${itemId}/workbook/worksheets('${nomeAba}')`;
+    const todasLinhas = [colunas].concat(linhasDados);
+    const nLinhas = Math.max(todasLinhas.length, 1);
+    const nColunas = colunas.length;
+    const enderecoFinal = colunaParaLetra(nColunas) + nLinhas;
+    await graphFetch(base + `/range(address='A1:${enderecoFinal}')`, {
+      method: 'PATCH',
+      body: JSON.stringify({ values: todasLinhas })
+    });
+  }
+
+  function excelSerialParaISO(n){
+    const base = new Date(Date.UTC(1899, 11, 30));
+    base.setUTCDate(base.getUTCDate() + Math.floor(n));
+    return base.toISOString().slice(0,10);
+  }
+  function normalizarData(valor){
+    if(valor === undefined || valor === null || valor === '') return '';
+    if(typeof valor === 'number') return excelSerialParaISO(valor);
+    const s = String(valor);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? s : d.toISOString().slice(0,10);
+  }
+  function normalizarTimestamp(valor){
+    if(valor === undefined || valor === null || valor === '') return '';
+    if(typeof valor === 'number') return excelSerialParaISO(valor) + 'T00:00:00.000Z';
+    const s = String(valor);
+    if(/^\d{4}-\d{2}-\d{2}T/.test(s)) return s;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? s : d.toISOString();
+  }
+
+  function linhaParaCirurgia(linha){
+    const obj = {};
+    COLUNAS_CIRURGIAS.forEach((campo, i) => { obj[campo] = linha[i]; });
+    obj.id = String(obj.id || '');
+    obj.nomeCirurgia = obj.nomeCirurgia !== undefined && obj.nomeCirurgia !== null ? String(obj.nomeCirurgia) : '';
+    obj.hospital = obj.hospital !== undefined && obj.hospital !== null ? String(obj.hospital) : '';
+    obj.data = normalizarData(obj.data);
+    obj.medico = obj.medico !== undefined && obj.medico !== null ? String(obj.medico) : '';
+    obj.instrumentador = obj.instrumentador !== undefined && obj.instrumentador !== null ? String(obj.instrumentador) : '';
+    obj.valorTotal = parseFloat(obj.valorTotal) || 0;
+    obj.valorInstrumentador = parseFloat(obj.valorInstrumentador) || 0;
+    obj.pagoInstrumentador = (obj.pagoInstrumentador === true || obj.pagoInstrumentador === 'true' || obj.pagoInstrumentador === 'TRUE' || obj.pagoInstrumentador === 1);
+    obj.dataPagamentoInstrumentador = obj.dataPagamentoInstrumentador ? normalizarTimestamp(obj.dataPagamentoInstrumentador) : null;
+    obj.atualizadoEm = normalizarTimestamp(obj.atualizadoEm);
+    obj.excluidoEm = obj.excluidoEm ? normalizarTimestamp(obj.excluidoEm) : null;
+    return obj;
+  }
+  function cirurgiaParaLinha(c){ return COLUNAS_CIRURGIAS.map(campo => (c[campo] === undefined || c[campo] === null) ? '' : c[campo]); }
+
+  function linhaParaPessoa(linha){
+    const obj = {};
+    COLUNAS_PESSOAS.forEach((campo, i) => { obj[campo] = linha[i]; });
+    obj.nomeKey = String(obj.nomeKey || '');
+    obj.nome = obj.nome !== undefined && obj.nome !== null ? String(obj.nome) : '';
+    obj.telefone = obj.telefone !== undefined && obj.telefone !== null ? String(obj.telefone) : '';
+    obj.atualizadoEm = normalizarTimestamp(obj.atualizadoEm);
+    obj.excluidoEm = obj.excluidoEm ? normalizarTimestamp(obj.excluidoEm) : null;
+    return obj;
+  }
+  function pessoaParaLinha(p){ return COLUNAS_PESSOAS.map(campo => (p[campo] === undefined || p[campo] === null) ? '' : p[campo]); }
+
+  function mesclarPorData(locais, remotos, chave){
+    const mapa = new Map();
+    locais.forEach(item => { if(item[chave]) mapa.set(item[chave], item); });
+    remotos.forEach(item => {
+      if(!item[chave]) return;
+      const existente = mapa.get(item[chave]);
+      if(!existente || (item.atualizadoEm || '') > (existente.atualizadoEm || '')) mapa.set(item[chave], item);
+    });
+    return Array.from(mapa.values());
+  }
+
+  async function sincronizarCirurgias(){
+    const linhas = await lerAba(ABA_CIRURGIAS);
+    const remotas = linhas.slice(1).filter(l => l[0]).map(linhaParaCirurgia).filter(c => /^c\d+/.test(String(c.id)));
+    cirurgias = mesclarPorData(cirurgias, remotas, 'id');
+    await idbSubstituirTudo('cirurgias', cirurgias);
+    const linhasParaEnviar = cirurgias.slice().sort((a,b) => (b.data||'').localeCompare(a.data||'')).map(cirurgiaParaLinha);
+    await escreverAba(ABA_CIRURGIAS, COLUNAS_CIRURGIAS, linhasParaEnviar);
+  }
+
+  async function sincronizarPessoas(tipo){
+    const nomeAba = ABAS_PESSOAS[tipo];
+    const linhas = await lerAba(nomeAba);
+    const remotas = linhas.slice(1).filter(l => l[0]).map(linhaParaPessoa)
+      .filter(p => p.nomeKey && p.nome && p.nomeKey === p.nome.trim().toLowerCase());
+    const locaisArr = Object.values(pessoas[tipo]);
+    const mescladas = mesclarPorData(locaisArr, remotas, 'nomeKey');
+    pessoas[tipo] = {}; mescladas.forEach(p => { pessoas[tipo][p.nomeKey] = p; });
+    await idbSubstituirTudo(TIPOS_PESSOA[tipo].store, mescladas);
+    const linhasParaEnviar = mescladas.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(pessoaParaLinha);
+    await escreverAba(nomeAba, COLUNAS_PESSOAS, linhasParaEnviar);
+  }
+
+  async function sincronizarTudo(origem){
+    if(!msalAccount || !navigator.onLine){ atualizarStatusSincronizacao(); return; }
+    if(sincronizando){ sincronizacaoPendente = true; return; }
+    sincronizando = true;
+    atualizarStatusSincronizacao('sincronizando');
+    try{
+      await sincronizarCirurgias();
+      for(const tipo of Object.keys(TIPOS_PESSOA)) await sincronizarPessoas(tipo);
+      await idbKvSet('ultima_sincronizacao', new Date().toISOString());
+      atualizarStatusSincronizacao('ok');
+      renderCirurgias(); renderPessoas();
+    }catch(e){
+      console.error('Erro ao sincronizar (' + origem + ')', e);
+      atualizarStatusSincronizacao('erro', e.message);
+    }finally{
+      sincronizando = false;
+      if(sincronizacaoPendente){ sincronizacaoPendente = false; setTimeout(() => sincronizarTudo('fila'), 800); }
+    }
+  }
+
+  function agendarSincronizacao(){
+    if(!msalAccount) return;
+    if(syncDebounceTimer) clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = setTimeout(() => sincronizarTudo('automatico'), 2500);
+  }
+
+  async function atualizarStatusSincronizacao(estadoForcado, mensagemErro){
+    let estado = estadoForcado;
+    if(!estado){
+      if(!getConfigClientId() || !getConfigLinkPlanilha()) estado = 'nao-configurado';
+      else if(!msalAccount) estado = 'desconectado';
+      else if(!navigator.onLine) estado = 'offline';
+      else estado = 'ok';
+    }
+    const setDisplay = (el, valor) => { if(el) el.style.display = valor; };
+    const addClasse = (classe) => { if(syncDotEl) syncDotEl.classList.add(classe); if(headerSyncDotEl) headerSyncDotEl.classList.add(classe); };
+    const setTexto = (texto) => { if(syncStatusTextEl) syncStatusTextEl.textContent = texto; };
+    [syncDotEl, headerSyncDotEl].forEach(el => { if(el) el.classList.remove('ok', 'syncing', 'error', 'offline'); });
+    setDisplay(btnSyncConectar, 'none'); setDisplay(btnSyncAgora, 'none'); setDisplay(btnSyncDesconectar, 'none');
+
+    if(estado === 'nao-configurado'){ setTexto('Sincronização não configurada. Toque em "Configurar integração" abaixo.'); }
+    else if(estado === 'desconectado'){ setTexto('Não conectado à Microsoft. Os dados ficam salvos só neste aparelho.'); setDisplay(btnSyncConectar, 'inline-block'); }
+    else if(estado === 'offline'){ addClasse('offline'); setTexto('Sem internet no momento. Assim que conectar, a sincronização acontece sozinha.'); setDisplay(btnSyncDesconectar, 'inline-block'); }
+    else if(estado === 'sincronizando'){ addClasse('syncing'); setTexto('Sincronizando com a planilha...'); }
+    else if(estado === 'erro'){ addClasse('error'); setTexto('Erro ao sincronizar: ' + (mensagemErro || 'tente novamente mais tarde.')); setDisplay(btnSyncAgora, 'inline-block'); setDisplay(btnSyncDesconectar, 'inline-block'); }
+    else if(estado === 'ok'){
+      addClasse('ok');
+      const ultima = await idbKvGet('ultima_sincronizacao');
+      const conta = msalAccount ? (msalAccount.username || msalAccount.name || '') : '';
+      setTexto('Sincronizado' + (conta ? ' · ' + conta : '') + (ultima ? ' · ' + new Date(ultima).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''));
+      setDisplay(btnSyncAgora, 'inline-block'); setDisplay(btnSyncDesconectar, 'inline-block');
+    }
+  }
+
+  async function inicializarSincronizacao(){
+    fSyncClientId.value = getConfigClientId(); fSyncLink.value = getConfigLinkPlanilha();
+    await atualizarStatusSincronizacao();
+    await inicializarMsal();
+  }
+
+  window.addEventListener('online', () => { atualizarStatusSincronizacao(); sincronizarTudo('ficou-online'); });
+  window.addEventListener('offline', () => atualizarStatusSincronizacao());
+  setInterval(() => { if(navigator.onLine && msalAccount) sincronizarTudo('periodico'); }, 3 * 60 * 1000);
+
+  loadData();
+</script>
+
+</body>
+</html>
