@@ -228,6 +228,28 @@
   .placeholder-card .icon{ font-size:36px; margin-bottom:10px; }
   .placeholder-card h3{ font-family:'Fredoka', sans-serif; font-weight:600; color:var(--ink); margin:0 0 6px 0; font-size:16px; }
   .placeholder-card p{ margin:0; font-size:13px; line-height:1.5; max-width:280px; }
+
+  .dash-filter-row{ display:flex; gap:10px; margin-bottom: 10px; }
+  .dash-clear{
+    width:100%; background: var(--card); border:1px solid var(--border); border-radius: 10px;
+    padding: 9px; font-family:'Inter', sans-serif; font-weight:600; font-size: 13px;
+    color: var(--ink-soft); cursor:pointer; margin-bottom: 18px;
+  }
+  .dash-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .dash-card{
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .dash-card.full{ grid-column: 1 / -1; }
+  .dash-label{ display:flex; align-items:center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 8px; }
+  .dash-dot{ width: 9px; height: 9px; border-radius: 50%; display:inline-block; flex-shrink:0; }
+  .dash-amount{ font-family:'Fredoka', sans-serif; font-weight: 600; font-size: 25px; line-height: 1.1; letter-spacing: -0.3px; }
+  .dash-mini-row{ display:flex; justify-content:space-between; align-items:center; font-size: 13.5px; }
+  .dash-mini-row strong{ color: var(--ink); }
+  .cirurgia-numero{
+    display:inline-block; background: var(--bg-2); color: var(--ink-soft); font-weight:700;
+    font-size: 11.5px; border-radius: 6px; padding: 2px 7px; margin-right: 7px; vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -260,9 +282,20 @@
           Editando cirurgia
         </div>
 
+        <div class="field-row">
+          <div class="field" style="flex:0 0 110px;">
+            <label for="f-numero">Nº controle</label>
+            <input type="text" id="f-numero" autocomplete="off" placeholder="Ex: 1">
+          </div>
+          <div class="field">
+            <label for="f-nome-cirurgia">Nome da cirurgia</label>
+            <input type="text" id="f-nome-cirurgia" autocomplete="off" placeholder="Ex: Colecistectomia">
+          </div>
+        </div>
+
         <div class="field">
-          <label for="f-nome-cirurgia">Nome da cirurgia</label>
-          <input type="text" id="f-nome-cirurgia" autocomplete="off" placeholder="Ex: Colecistectomia">
+          <label for="f-paciente">Paciente</label>
+          <input type="text" id="f-paciente" autocomplete="off" placeholder="Nome do paciente">
         </div>
 
         <div class="field" style="position:relative;">
@@ -322,7 +355,7 @@
 
       <div id="painel-filtros" class="filter-panel" style="display:none;">
         <div class="field">
-          <label for="f-filtro-texto">Buscar (cirurgia, hospital, médico ou instrumentador)</label>
+          <label for="f-filtro-texto">Buscar (número, cirurgia, paciente, hospital, médico ou instrumentador)</label>
           <input type="text" id="f-filtro-texto" placeholder="Digite para buscar">
         </div>
         <div class="field-row">
@@ -713,6 +746,8 @@
       if(c.excluidoEm === undefined){ c.excluidoEm = null; alterou = true; }
       if(c.pagoInstrumentador === undefined){ c.pagoInstrumentador = false; alterou = true; }
       if(c.dataPagamentoInstrumentador === undefined){ c.dataPagamentoInstrumentador = null; alterou = true; }
+      if(c.numero === undefined){ c.numero = ''; alterou = true; }
+      if(c.paciente === undefined){ c.paciente = ''; alterou = true; }
     });
     if(alterou) await idbSubstituirTudo('cirurgias', cirurgias);
   }
@@ -757,6 +792,8 @@
   const btnNovaCirurgia = document.getElementById('btn-nova-cirurgia');
   const btnCancelarCirurgia = document.getElementById('btn-cancelar-cirurgia');
   const fNomeCirurgia = document.getElementById('f-nome-cirurgia');
+  const fNumero = document.getElementById('f-numero');
+  const fPaciente = document.getElementById('f-paciente');
   const fHospital = document.getElementById('f-hospital');
   const fData = document.getElementById('f-data');
   const fMedico = document.getElementById('f-medico');
@@ -768,13 +805,25 @@
 
   let editingCirurgiaId = null;
 
+  function proximoNumeroControle(){
+    let maior = 0;
+    cirurgias.forEach(c => {
+      const n = parseInt(String(c.numero || '').replace(/\D/g, ''), 10);
+      if(!isNaN(n) && n > maior) maior = n;
+    });
+    return String(maior + 1);
+  }
+
   function abrirFormCirurgia(){ formCirurgia.style.display = 'flex'; btnNovaCirurgia.style.display = 'none'; fNomeCirurgia.focus(); }
   function fecharFormCirurgia(){
     formCirurgia.style.display = 'none'; btnNovaCirurgia.style.display = 'flex';
     formCirurgia.reset(); editingCirurgiaId = null; formEditBadge.style.display = 'none';
     esconderTodasSugestoes();
   }
-  btnNovaCirurgia.addEventListener('click', abrirFormCirurgia);
+  btnNovaCirurgia.addEventListener('click', () => {
+    abrirFormCirurgia();
+    fNumero.value = proximoNumeroControle();
+  });
   btnCancelarCirurgia.addEventListener('click', fecharFormCirurgia);
 
   formCirurgia.addEventListener('submit', async (e) => {
@@ -782,7 +831,9 @@
     const agora = new Date().toISOString();
     const jaEstavaPago = editingCirurgiaId ? (cirurgias.find(c => c.id === editingCirurgiaId) || {}).pagoInstrumentador : false;
     const dados = {
+      numero: fNumero.value.trim(),
       nomeCirurgia: fNomeCirurgia.value.trim(),
+      paciente: fPaciente.value.trim(),
       hospital: fHospital.value.trim(),
       data: fData.value || '',
       medico: fMedico.value.trim(),
@@ -815,7 +866,9 @@
     const c = cirurgias.find(x => x.id === id);
     if(!c) return;
     editingCirurgiaId = id;
+    fNumero.value = c.numero || '';
     fNomeCirurgia.value = c.nomeCirurgia || '';
+    fPaciente.value = c.paciente || '';
     fHospital.value = c.hospital || '';
     fData.value = c.data || '';
     fMedico.value = c.medico || '';
@@ -901,7 +954,7 @@
     const de = fFiltroDe.value; const ate = fFiltroAte.value;
     return lista.filter(c => {
       if(texto){
-        const alvo = [c.nomeCirurgia, c.hospital, c.medico, c.instrumentador].join(' ').toLowerCase();
+        const alvo = [c.numero, c.nomeCirurgia, c.paciente, c.hospital, c.medico, c.instrumentador].join(' ').toLowerCase();
         if(!alvo.includes(texto)) return false;
       }
       if(de && c.data && c.data < de) return false;
@@ -946,8 +999,9 @@
       <div class="item-card">
         <div class="top-row">
           <div>
-            <div class="title">${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
+            <div class="title">${c.numero ? `<span class="cirurgia-numero">#${escapeHtml(c.numero)}</span>` : ''}${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
             <div class="meta">
+              ${c.paciente ? `<div><b>Paciente:</b> ${escapeHtml(c.paciente)}</div>` : ''}
               ${c.hospital ? `<div><b>Hospital:</b> ${escapeHtml(c.hospital)}</div>` : ''}
               ${c.data ? `<div><b>Data:</b> ${formatDate(c.data)}</div>` : ''}
               ${c.medico ? `<div><b>Médico:</b> ${escapeHtml(c.medico)}</div>` : ''}
@@ -1110,8 +1164,8 @@
               ${cirurgiasOrdenadas.map(c => `
                 <div style="border-top:1px solid var(--border); padding-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
                   <div style="min-width:0;">
-                    <div style="font-weight:600; font-size:13.5px;">${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
-                    <div class="meta" style="margin-top:1px;">${c.data ? formatDate(c.data) : ''}${c.hospital ? ' · ' + escapeHtml(c.hospital) : ''} · ${formatMoney(c.valorInstrumentador || 0)}</div>
+                    <div style="font-weight:600; font-size:13.5px;">${c.numero ? `<span class="cirurgia-numero">#${escapeHtml(c.numero)}</span>` : ''}${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
+                    <div class="meta" style="margin-top:1px;">${c.paciente ? escapeHtml(c.paciente) + ' · ' : ''}${c.data ? formatDate(c.data) : ''}${c.hospital ? ' · ' + escapeHtml(c.hospital) : ''} · ${formatMoney(c.valorInstrumentador || 0)}</div>
                   </div>
                   <button type="button" class="btn-secondary" style="flex:unset; padding:7px 10px; font-size:12px; white-space:nowrap;"
                     onclick="event.stopPropagation(); marcarPagamentoInstrumentador('${c.id}', ${!c.pagoInstrumentador})">
@@ -1240,8 +1294,8 @@
         <div class="item-card">
           <div class="top-row">
             <div>
-              <div class="title">${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
-              <div class="meta">${c.data ? formatDate(c.data) : ''}${c.hospital ? ' · ' + escapeHtml(c.hospital) : ''}</div>
+              <div class="title">${c.numero ? `<span class="cirurgia-numero">#${escapeHtml(c.numero)}</span>` : ''}${escapeHtml(c.nomeCirurgia) || '<sem nome>'}</div>
+              <div class="meta">${c.paciente ? escapeHtml(c.paciente) + ' · ' : ''}${c.data ? formatDate(c.data) : ''}${c.hospital ? ' · ' + escapeHtml(c.hospital) : ''}</div>
             </div>
             <div class="value">${c.valorTotal ? formatMoney(c.valorTotal) : ''}</div>
           </div>
@@ -1332,7 +1386,7 @@
   // 3. Cada tipo de dado tem sua própria aba na planilha: Cirurgias,
   //    Instrumentadores, Medicos, Hospitais.
 
-  const COLUNAS_CIRURGIAS = ['id','nomeCirurgia','hospital','data','medico','instrumentador','valorTotal','valorInstrumentador','pagoInstrumentador','dataPagamentoInstrumentador','atualizadoEm','excluidoEm'];
+  const COLUNAS_CIRURGIAS = ['id','numero','nomeCirurgia','paciente','hospital','data','medico','instrumentador','valorTotal','valorInstrumentador','pagoInstrumentador','dataPagamentoInstrumentador','atualizadoEm','excluidoEm'];
   const COLUNAS_PESSOAS = ['nomeKey','nome','telefone','atualizadoEm','excluidoEm'];
   const ABA_CIRURGIAS = 'Cirurgias';
   const ABAS_PESSOAS = { instrumentador: 'Instrumentadores', medico: 'Medicos', hospital: 'Hospitais' };
@@ -1516,7 +1570,9 @@
     const obj = {};
     COLUNAS_CIRURGIAS.forEach((campo, i) => { obj[campo] = linha[i]; });
     obj.id = String(obj.id || '');
+    obj.numero = obj.numero !== undefined && obj.numero !== null ? String(obj.numero) : '';
     obj.nomeCirurgia = obj.nomeCirurgia !== undefined && obj.nomeCirurgia !== null ? String(obj.nomeCirurgia) : '';
+    obj.paciente = obj.paciente !== undefined && obj.paciente !== null ? String(obj.paciente) : '';
     obj.hospital = obj.hospital !== undefined && obj.hospital !== null ? String(obj.hospital) : '';
     obj.data = normalizarData(obj.data);
     obj.medico = obj.medico !== undefined && obj.medico !== null ? String(obj.medico) : '';
