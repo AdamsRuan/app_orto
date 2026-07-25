@@ -557,13 +557,108 @@
       </div>
     </section>
 
-    <!-- ===================== ABA ESTOQUE (placeholder) ===================== -->
+    <!-- ===================== ABA ESTOQUE ===================== -->
     <section id="tab-estoque" class="tab-panel">
-      <div class="placeholder-card">
-        <div class="icon">📦</div>
-        <h3>Em breve</h3>
-        <p>Essa aba ainda será definida com você em uma próxima fase.</p>
+
+      <div class="sub-tabbar">
+        <button class="sub-tab-btn active" data-estoque="romaneio">Romaneio</button>
+        <button class="sub-tab-btn" data-estoque="implantavel">Implantável</button>
+        <button class="sub-tab-btn" data-estoque="descartavel">Descartável</button>
+        <button class="sub-tab-btn" data-estoque="caixas">Caixas</button>
       </div>
+
+      <div id="estoque-panel-romaneio" class="estoque-cat-panel">
+        <div class="placeholder-card">
+          <div class="icon">📋</div>
+          <h3>Em breve</h3>
+          <p>Essa aba ainda será definida com você em uma próxima fase.</p>
+        </div>
+      </div>
+
+      <div id="estoque-panel-caixas" class="estoque-cat-panel" style="display:none;">
+        <div class="placeholder-card">
+          <div class="icon">📦</div>
+          <h3>Em breve</h3>
+          <p>Essa aba ainda será definida com você em uma próxima fase.</p>
+        </div>
+      </div>
+
+      <div id="estoque-panel-itens" class="estoque-cat-panel" style="display:none;">
+
+        <div class="field" style="margin-bottom: 14px;">
+          <label for="f-estoque-busca">Buscar por nome ou código ANVISA</label>
+          <input type="text" id="f-estoque-busca" autocomplete="off" placeholder="Digite para buscar">
+        </div>
+
+        <button id="btn-novo-item-estoque" class="fab-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span id="btn-novo-item-estoque-label">Novo item</span>
+        </button>
+
+        <form id="form-item-estoque" class="card form-card" style="display:none;">
+          <div id="form-item-estoque-edit-badge" style="display:none; font-size:12.5px; font-weight:600; color: var(--ink-soft);">Editando item</div>
+
+          <div class="field">
+            <label for="f-item-nome">Nome</label>
+            <input type="text" id="f-item-nome" autocomplete="off" placeholder="Ex: Placa bloqueada 4.5">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-item-marca">Marca</label>
+              <input type="text" id="f-item-marca" autocomplete="off" placeholder="Ex: Zimmer">
+            </div>
+            <div class="field">
+              <label for="f-item-anvisa">Código ANVISA</label>
+              <input type="text" id="f-item-anvisa" autocomplete="off" placeholder="Ex: 10345678901">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-item-lote">Lote</label>
+              <input type="text" id="f-item-lote" autocomplete="off" placeholder="Ex: L2026A">
+            </div>
+            <div class="field">
+              <label for="f-item-validade">Validade</label>
+              <input type="date" id="f-item-validade">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-item-quantidade">Quantidade</label>
+              <input type="number" id="f-item-quantidade" min="0" step="1" placeholder="0">
+            </div>
+            <div class="field">
+              <label for="f-item-custo">Custo (R$)</label>
+              <input type="number" id="f-item-custo" min="0" step="0.01" placeholder="0,00">
+            </div>
+            <div class="field">
+              <label for="f-item-venda">Venda (R$)</label>
+              <input type="number" id="f-item-venda" min="0" step="0.01" placeholder="0,00">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancelar-item-estoque" class="btn-secondary">Cancelar</button>
+            <button type="submit" class="btn-primary">Salvar item</button>
+          </div>
+        </form>
+
+        <div id="lista-itens-estoque"></div>
+
+        <div id="estoque-item-empty" class="empty-state">
+          <div class="icon">🧰</div>
+          <h3 id="estoque-item-empty-titulo">Nenhum item cadastrado</h3>
+          <p>Toque em "Novo item" para cadastrar o primeiro.</p>
+        </div>
+
+        <div id="estoque-item-empty-busca" class="empty-state" style="display:none;">
+          <div class="icon">🔍</div>
+          <h3>Nenhum item encontrado</h3>
+          <p>Tente ajustar o termo da busca.</p>
+        </div>
+
+      </div>
+
     </section>
 
   </main>
@@ -577,9 +672,9 @@
       <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span>
       Dashboard
     </button>
-    <button class="tab-btn" data-tab="clientes" data-title="Clientes" data-subtitle="Instrumentador, médico e hospital">
+    <button class="tab-btn" data-tab="clientes" data-title="Pessoal" data-subtitle="Instrumentador, médico e hospital">
       <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></svg></span>
-      Clientes
+      Pessoal
     </button>
     <button class="tab-btn" data-tab="orcamento" data-title="Orçamento" data-subtitle="Em breve">
       <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
@@ -668,7 +763,7 @@
   // ---------- Armazenamento offline (IndexedDB) ----------
   // ==========================================================================
   const IDB_NOME = 'gestao_cirurgica_db';
-  const IDB_VERSAO = 1;
+  const IDB_VERSAO = 2;
   let idbPromise = null;
 
   function idbAbrir(){
@@ -682,6 +777,8 @@
         if(!db.objectStoreNames.contains('instrumentadores')) db.createObjectStore('instrumentadores', { keyPath: 'nomeKey' });
         if(!db.objectStoreNames.contains('medicos')) db.createObjectStore('medicos', { keyPath: 'nomeKey' });
         if(!db.objectStoreNames.contains('hospitais')) db.createObjectStore('hospitais', { keyPath: 'nomeKey' });
+        if(!db.objectStoreNames.contains('estoqueImplantavel')) db.createObjectStore('estoqueImplantavel', { keyPath: 'id' });
+        if(!db.objectStoreNames.contains('estoqueDescartavel')) db.createObjectStore('estoqueDescartavel', { keyPath: 'id' });
         if(!db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'key' });
       };
       req.onsuccess = () => resolve(req.result);
@@ -715,6 +812,7 @@
 
   let cirurgias = [];
   let pessoas = { instrumentador: {}, medico: {}, hospital: {} };
+  let estoqueItens = { implantavel: {}, descartavel: {} };
 
   const TIPOS_PESSOA = {
     instrumentador: { store: 'instrumentadores', label: 'instrumentador', labelCap: 'Instrumentador', campoCirurgia: 'instrumentador' },
@@ -722,8 +820,14 @@
     hospital:       { store: 'hospitais',        label: 'hospital',      labelCap: 'Hospital',       campoCirurgia: 'hospital' }
   };
 
+  const TIPOS_ESTOQUE = {
+    implantavel: { store: 'estoqueImplantavel', label: 'implantável', labelCap: 'Implantável', abaExcel: 'Implantavel' },
+    descartavel: { store: 'estoqueDescartavel', label: 'descartável', labelCap: 'Descartável', abaExcel: 'Descartavel' }
+  };
+
   function cirurgiasAtivas(){ return cirurgias.filter(c => !c.excluidoEm); }
   function pessoasAtivas(tipo){ return Object.values(pessoas[tipo]).filter(p => !p.excluidoEm); }
+  function itensEstoqueAtivos(tipo){ return Object.values(estoqueItens[tipo]).filter(i => !i.excluidoEm); }
 
   async function loadData(){
     cirurgias = await idbGetAll('cirurgias');
@@ -731,6 +835,11 @@
       const arr = await idbGetAll(TIPOS_PESSOA[tipo].store);
       pessoas[tipo] = {};
       arr.forEach(p => { pessoas[tipo][p.nomeKey] = p; });
+    }
+    for(const tipo of Object.keys(TIPOS_ESTOQUE)){
+      const arr = await idbGetAll(TIPOS_ESTOQUE[tipo].store);
+      estoqueItens[tipo] = {};
+      arr.forEach(i => { estoqueItens[tipo][i.id] = i; });
     }
     await migrarDadosAntigos();
     renderCirurgias();
@@ -767,6 +876,12 @@
   async function savePessoas(tipo){
     const arr = Object.values(pessoas[tipo]);
     await idbSubstituirTudo(TIPOS_PESSOA[tipo].store, arr);
+    agendarSincronizacao();
+  }
+
+  async function saveItensEstoque(tipo){
+    const arr = Object.values(estoqueItens[tipo]);
+    await idbSubstituirTudo(TIPOS_ESTOQUE[tipo].store, arr);
     agendarSincronizacao();
   }
 
@@ -1344,10 +1459,163 @@
   });
 
   // ==========================================================================
+  // ---------- Aba Estoque: Romaneio / Implantável / Descartável / Caixas ----------
+  // ==========================================================================
+  let tipoEstoqueAtivo = null;
+  const estoqueSubTabs = document.querySelectorAll('#tab-estoque .sub-tabbar .sub-tab-btn');
+  const estoquePanelRomaneio = document.getElementById('estoque-panel-romaneio');
+  const estoquePanelCaixas = document.getElementById('estoque-panel-caixas');
+  const estoquePanelItens = document.getElementById('estoque-panel-itens');
+  const btnNovoItemEstoque = document.getElementById('btn-novo-item-estoque');
+  const btnNovoItemEstoqueLabel = document.getElementById('btn-novo-item-estoque-label');
+  const formItemEstoque = document.getElementById('form-item-estoque');
+  const formItemEstoqueEditBadge = document.getElementById('form-item-estoque-edit-badge');
+  const btnCancelarItemEstoque = document.getElementById('btn-cancelar-item-estoque');
+  const fItemNome = document.getElementById('f-item-nome');
+  const fItemMarca = document.getElementById('f-item-marca');
+  const fItemAnvisa = document.getElementById('f-item-anvisa');
+  const fItemLote = document.getElementById('f-item-lote');
+  const fItemValidade = document.getElementById('f-item-validade');
+  const fItemQuantidade = document.getElementById('f-item-quantidade');
+  const fItemCusto = document.getElementById('f-item-custo');
+  const fItemVenda = document.getElementById('f-item-venda');
+  const fEstoqueBusca = document.getElementById('f-estoque-busca');
+  const estoqueItemEmptyTitulo = document.getElementById('estoque-item-empty-titulo');
+  let editingItemEstoqueId = null;
+
+  estoqueSubTabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      estoqueSubTabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const alvo = btn.dataset.estoque;
+      estoquePanelRomaneio.style.display = alvo === 'romaneio' ? 'block' : 'none';
+      estoquePanelCaixas.style.display = alvo === 'caixas' ? 'block' : 'none';
+      estoquePanelItens.style.display = (alvo === 'implantavel' || alvo === 'descartavel') ? 'block' : 'none';
+      if(alvo === 'implantavel' || alvo === 'descartavel'){
+        tipoEstoqueAtivo = alvo;
+        fecharFormItemEstoque();
+        fEstoqueBusca.value = '';
+        renderItensEstoque();
+      }
+    });
+  });
+
+  function abrirFormItemEstoque(){
+    btnNovoItemEstoqueLabel.textContent = 'Novo ' + TIPOS_ESTOQUE[tipoEstoqueAtivo].label;
+    formItemEstoque.style.display = 'flex'; btnNovoItemEstoque.style.display = 'none'; fItemNome.focus();
+  }
+  function fecharFormItemEstoque(){
+    formItemEstoque.style.display = 'none'; btnNovoItemEstoque.style.display = 'flex';
+    formItemEstoque.reset(); editingItemEstoqueId = null; formItemEstoqueEditBadge.style.display = 'none';
+  }
+  btnNovoItemEstoque.addEventListener('click', abrirFormItemEstoque);
+  btnCancelarItemEstoque.addEventListener('click', fecharFormItemEstoque);
+  fEstoqueBusca.addEventListener('input', renderItensEstoque);
+
+  formItemEstoque.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!tipoEstoqueAtivo) return;
+    const agora = new Date().toISOString();
+    const dados = {
+      nome: fItemNome.value.trim(),
+      marca: fItemMarca.value.trim(),
+      codigoAnvisa: fItemAnvisa.value.trim(),
+      lote: fItemLote.value.trim(),
+      validade: fItemValidade.value || '',
+      quantidade: parseFloat(fItemQuantidade.value) || 0,
+      custo: parseFloat(fItemCusto.value) || 0,
+      venda: parseFloat(fItemVenda.value) || 0,
+      atualizadoEm: agora, excluidoEm: null
+    };
+    if(editingItemEstoqueId){
+      estoqueItens[tipoEstoqueAtivo][editingItemEstoqueId] = Object.assign({}, estoqueItens[tipoEstoqueAtivo][editingItemEstoqueId], dados);
+    }else{
+      const id = 'e' + Date.now() + Math.floor(Math.random()*1000);
+      estoqueItens[tipoEstoqueAtivo][id] = Object.assign({ id }, dados);
+    }
+    await saveItensEstoque(tipoEstoqueAtivo);
+    renderItensEstoque();
+    fecharFormItemEstoque();
+  });
+
+  function editarItemEstoque(id){
+    const item = estoqueItens[tipoEstoqueAtivo][id];
+    if(!item) return;
+    editingItemEstoqueId = id;
+    fItemNome.value = item.nome || '';
+    fItemMarca.value = item.marca || '';
+    fItemAnvisa.value = item.codigoAnvisa || '';
+    fItemLote.value = item.lote || '';
+    fItemValidade.value = item.validade || '';
+    fItemQuantidade.value = item.quantidade || '';
+    fItemCusto.value = item.custo || '';
+    fItemVenda.value = item.venda || '';
+    formItemEstoqueEditBadge.style.display = 'block';
+    abrirFormItemEstoque();
+  }
+
+  async function excluirItemEstoque(id){
+    if(!confirm('Excluir este item do estoque?')) return;
+    const item = estoqueItens[tipoEstoqueAtivo][id];
+    if(item){ item.excluidoEm = new Date().toISOString(); item.atualizadoEm = new Date().toISOString(); }
+    await saveItensEstoque(tipoEstoqueAtivo);
+    renderItensEstoque();
+  }
+
+  function renderItensEstoque(){
+    if(!tipoEstoqueAtivo) return;
+    const info = TIPOS_ESTOQUE[tipoEstoqueAtivo];
+    estoqueItemEmptyTitulo.textContent = 'Nenhum ' + info.label + ' cadastrado';
+    btnNovoItemEstoqueLabel.textContent = 'Novo ' + info.label;
+
+    const lista = document.getElementById('lista-itens-estoque');
+    const emptyGeral = document.getElementById('estoque-item-empty');
+    const emptyBusca = document.getElementById('estoque-item-empty-busca');
+    const termo = fEstoqueBusca.value.trim().toLowerCase();
+
+    const ativos = itensEstoqueAtivos(tipoEstoqueAtivo).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const filtrados = termo
+      ? ativos.filter(i => (i.nome || '').toLowerCase().includes(termo) || (i.codigoAnvisa || '').toLowerCase().includes(termo))
+      : ativos;
+
+    if(!ativos.length){ lista.innerHTML = ''; emptyGeral.style.display = 'flex'; emptyBusca.style.display = 'none'; return; }
+    if(!filtrados.length){ lista.innerHTML = ''; emptyGeral.style.display = 'none'; emptyBusca.style.display = 'flex'; return; }
+    emptyGeral.style.display = 'none'; emptyBusca.style.display = 'none';
+
+    lista.innerHTML = filtrados.map(item => `
+      <div class="item-card">
+        <div class="top-row">
+          <div>
+            <div class="title">${escapeHtml(item.nome) || '<sem nome>'}</div>
+            <div class="meta">
+              ${item.marca ? `<div><b>Marca:</b> ${escapeHtml(item.marca)}</div>` : ''}
+              ${item.codigoAnvisa ? `<div><b>ANVISA:</b> ${escapeHtml(item.codigoAnvisa)}</div>` : ''}
+              ${item.lote ? `<div><b>Lote:</b> ${escapeHtml(item.lote)}</div>` : ''}
+              ${item.validade ? `<div><b>Validade:</b> ${formatDate(item.validade)}</div>` : ''}
+            </div>
+          </div>
+          <div class="value">${item.venda ? formatMoney(item.venda) : ''}</div>
+        </div>
+        <div class="bottom-row">
+          <div class="badge">Qtd: ${item.quantidade || 0}${item.custo ? ' · Custo: ' + formatMoney(item.custo) : ''}</div>
+          <div class="row-actions">
+            <button class="icon-btn" aria-label="Editar" onclick="editarItemEstoque('${item.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+            <button class="icon-btn" aria-label="Excluir" onclick="excluirItemEstoque('${item.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ==========================================================================
   // ---------- Backup manual (JSON) ----------
   // ==========================================================================
   document.getElementById('btn-backup-baixar').addEventListener('click', () => {
-    const dados = { cirurgias, pessoas, exportadoEm: new Date().toISOString() };
+    const dados = { cirurgias, pessoas, estoqueItens, exportadoEm: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1365,9 +1633,12 @@
       if(!confirm('Isso vai substituir os dados atuais deste aparelho pelos dados do arquivo. Continuar?')) return;
       cirurgias = dados.cirurgias || [];
       pessoas = dados.pessoas || { instrumentador: {}, medico: {}, hospital: {} };
+      estoqueItens = dados.estoqueItens || { implantavel: {}, descartavel: {} };
       await idbSubstituirTudo('cirurgias', cirurgias);
       for(const tipo of Object.keys(TIPOS_PESSOA)) await idbSubstituirTudo(TIPOS_PESSOA[tipo].store, Object.values(pessoas[tipo] || {}));
+      for(const tipo of Object.keys(TIPOS_ESTOQUE)) await idbSubstituirTudo(TIPOS_ESTOQUE[tipo].store, Object.values(estoqueItens[tipo] || {}));
       renderCirurgias(); renderPessoas();
+      if(tipoEstoqueAtivo) renderItensEstoque();
       alert('Backup restaurado com sucesso.');
     }catch(err){
       alert('Não foi possível ler este arquivo de backup.');
@@ -1388,6 +1659,7 @@
 
   const COLUNAS_CIRURGIAS = ['id','numero','nomeCirurgia','paciente','hospital','data','medico','instrumentador','valorTotal','valorInstrumentador','pagoInstrumentador','dataPagamentoInstrumentador','atualizadoEm','excluidoEm'];
   const COLUNAS_PESSOAS = ['nomeKey','nome','telefone','atualizadoEm','excluidoEm'];
+  const COLUNAS_ESTOQUE = ['id','nome','marca','codigoAnvisa','lote','validade','quantidade','custo','venda','atualizadoEm','excluidoEm'];
   const ABA_CIRURGIAS = 'Cirurgias';
   const ABAS_PESSOAS = { instrumentador: 'Instrumentadores', medico: 'Medicos', hospital: 'Hospitais' };
   const MSAL_SCOPES = ['Files.ReadWrite'];
@@ -1599,6 +1871,24 @@
   }
   function pessoaParaLinha(p){ return COLUNAS_PESSOAS.map(campo => (p[campo] === undefined || p[campo] === null) ? '' : p[campo]); }
 
+  function linhaParaItemEstoque(linha){
+    const obj = {};
+    COLUNAS_ESTOQUE.forEach((campo, i) => { obj[campo] = linha[i]; });
+    obj.id = String(obj.id || '');
+    obj.nome = obj.nome !== undefined && obj.nome !== null ? String(obj.nome) : '';
+    obj.marca = obj.marca !== undefined && obj.marca !== null ? String(obj.marca) : '';
+    obj.codigoAnvisa = obj.codigoAnvisa !== undefined && obj.codigoAnvisa !== null ? String(obj.codigoAnvisa) : '';
+    obj.lote = obj.lote !== undefined && obj.lote !== null ? String(obj.lote) : '';
+    obj.validade = normalizarData(obj.validade);
+    obj.quantidade = parseFloat(obj.quantidade) || 0;
+    obj.custo = parseFloat(obj.custo) || 0;
+    obj.venda = parseFloat(obj.venda) || 0;
+    obj.atualizadoEm = normalizarTimestamp(obj.atualizadoEm);
+    obj.excluidoEm = obj.excluidoEm ? normalizarTimestamp(obj.excluidoEm) : null;
+    return obj;
+  }
+  function itemEstoqueParaLinha(i){ return COLUNAS_ESTOQUE.map(campo => (i[campo] === undefined || i[campo] === null) ? '' : i[campo]); }
+
   function mesclarPorData(locais, remotos, chave){
     const mapa = new Map();
     locais.forEach(item => { if(item[chave]) mapa.set(item[chave], item); });
@@ -1632,6 +1922,18 @@
     await escreverAba(nomeAba, COLUNAS_PESSOAS, linhasParaEnviar);
   }
 
+  async function sincronizarEstoque(tipo){
+    const nomeAba = TIPOS_ESTOQUE[tipo].abaExcel;
+    const linhas = await lerAba(nomeAba);
+    const remotas = linhas.slice(1).filter(l => l[0]).map(linhaParaItemEstoque).filter(i => /^e\d+/.test(String(i.id)));
+    const locaisArr = Object.values(estoqueItens[tipo]);
+    const mescladas = mesclarPorData(locaisArr, remotas, 'id');
+    estoqueItens[tipo] = {}; mescladas.forEach(i => { estoqueItens[tipo][i.id] = i; });
+    await idbSubstituirTudo(TIPOS_ESTOQUE[tipo].store, mescladas);
+    const linhasParaEnviar = mescladas.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(itemEstoqueParaLinha);
+    await escreverAba(nomeAba, COLUNAS_ESTOQUE, linhasParaEnviar);
+  }
+
   async function sincronizarTudo(origem){
     if(!msalAccount || !navigator.onLine){ atualizarStatusSincronizacao(); return; }
     if(sincronizando){ sincronizacaoPendente = true; return; }
@@ -1640,9 +1942,11 @@
     try{
       await sincronizarCirurgias();
       for(const tipo of Object.keys(TIPOS_PESSOA)) await sincronizarPessoas(tipo);
+      for(const tipo of Object.keys(TIPOS_ESTOQUE)) await sincronizarEstoque(tipo);
       await idbKvSet('ultima_sincronizacao', new Date().toISOString());
       atualizarStatusSincronizacao('ok');
       renderCirurgias(); renderPessoas();
+      if(tipoEstoqueAtivo) renderItensEstoque();
     }catch(e){
       console.error('Erro ao sincronizar (' + origem + ')', e);
       atualizarStatusSincronizacao('erro', e.message);
